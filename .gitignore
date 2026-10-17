@@ -1,0 +1,15 @@
+/target/
+/.m2/
+/.scannerwork/
+/.sonarqube/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.idea/
+.vscode/
+*.iml
+.DS_Store
