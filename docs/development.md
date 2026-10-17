@@ -11,6 +11,13 @@ python3 scripts/check_docs.py
 Inspect target/ test reports and generated JAR manifest. Building must not require
 a running SonarQube, Python analyzer dependencies or private game credentials.
 
+CI builds/tests on every push and pull request. Artifact storage is optional:
+manual workflow dispatch can enable `upload_artifact` when organization quota is
+available. The initial CI build/tests passed but artifact upload failed because
+the organization's storage quota was full. Existing artifacts were not deleted;
+normal verification no longer requires artifact storage. Local JARs remain in
+target/ and are intentionally not committed.
+
 ## Isolated integration gate (required before release)
 1. Build/inspect the JAR and its plugin/API/JDK manifest requirements.
 2. Provision disposable matching SonarQube with separate volumes and a loopback
