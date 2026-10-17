@@ -27,7 +27,7 @@ class GDScriptRegistrationTest {
     assertEquals("line-length", profile.rules().get(0).ruleKey());
     SonarRuntime runtime = new SonarRuntime() {
       public org.sonar.api.SonarEdition getEdition() { return org.sonar.api.SonarEdition.COMMUNITY; }
-      public Version getApiVersion() { return Version.parse("13.8"); }
+      public Version getApiVersion() { return Version.parse("13.4.3"); }
       public SonarProduct getProduct() { return SonarProduct.SONARQUBE; }
       public SonarQubeSide getSonarQubeSide() { return SonarQubeSide.SERVER; }
     };

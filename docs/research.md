@@ -1,7 +1,8 @@
 # Research and sources
 
-Research date: 2026-10-20. Re-check mutable upstream documentation and pin actual
-implementation dependencies. Upstream descriptions are not runtime test evidence.
+Research date: 2026-10-20; version baseline re-checked 2026-10-21. Re-check mutable
+upstream documentation and pin actual implementation dependencies. Upstream
+descriptions are not runtime test evidence.
 
 ## SonarQube model
 - [Supporting new languages](https://docs.sonarsource.com/sonarqube-community-build/extension-guide/developing-a-plugin/supporting-new-languages): grammar/parser, rule visitors, scanner Sensor; measures, duplication, highlighting, symbols and coverage are separate capabilities.
@@ -10,13 +11,30 @@ implementation dependencies. Upstream descriptions are not runtime test evidence
 - [Sonar Plugin API](https://github.com/SonarSource/sonar-plugin-api): versioned separately from server; latest API is not automatically compatible with an older server.
 - [Generic issue import](https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/importing-external-issues/generic-issue-import-format): optional external-report alternative, not native language metrics, profiles or coverage.
 
+## Version baseline
+- [Plugin API compatibility table](https://github.com/SonarSource/sonar-plugin-api#compatibility):
+  every Server 2026.1.x patch and Community Build 26.1/26.2 ship Plugin API
+  13.4.3.4290; Server 2026.4 and Community Build 26.7/26.8 ship 13.8.0.4399;
+  Server 2026.5 LTA ships 14.0.0.4498.
+- [Server 2026.1 scanner requirements](https://docs.sonarsource.com/sonarqube-server/2026.1/analyzing-source-code/scanners/scanner-environment/general-requirements):
+  Java 17 is deprecated but supported for scanners until 2026.3; Java 21 is
+  required from 2026.4. Auto-provisioning manages the scanner JRE.
+- [sensor-test-fixtures](https://repo1.maven.org/maven2/org/sonarsource/scanner/engine/sensor-test-fixtures/):
+  every published version depends on Plugin API 13.8+; locally it fails at the
+  13.4.3 floor with a missing `NewIssueResolution` class (added in 13.5).
+- [sonar-plugin-api-impl 26.2.0.119303](https://repo1.maven.org/maven2/org/sonarsource/sonarqube/sonar-plugin-api-impl/26.2.0.119303/):
+  still contains `SensorContextTester`/`TestInputFileBuilder` (removed in 26.7),
+  targets Plugin API 13.4.3 and is Java 17 bytecode.
+- [Third-party plugins on SonarQube Cloud](https://community.sonarsource.com/t/does-sonarqube-cloud-support-third-party-plugins-like-the-mulesoft-sonarqube-plugin/138134):
+  not supported.
+
 ## Existing plugin
 [darkiyy/sonar-gdscript](https://github.com/darkiyy/sonar-gdscript) explicitly says
 it is unfinished, targets SonarQube 10.x and can have Godot 4 grammar problems.
 Latest checked prerelease:
 [v0.11.1-aplha](https://github.com/darkiyy/sonar-gdscript/releases/tag/v0.11.1-aplha),
 2023-05-30. That unusual spelling is the real tag. Coverage and some metrics are
-unfinished. No Community Build 26.7 compatibility is established. LGPL-3.0 source;
+unfinished. No 2026.x server compatibility is established. LGPL-3.0 source;
 none has been copied into this independent project.
 
 The [rtownsend9 fork](https://github.com/rtownsend9/sonar-gdscript) showed a newer
@@ -39,7 +57,8 @@ syntax feature. Do not invoke its formatter during an analysis-only scan.
 - [Editor code execution](https://docs.godotengine.org/en/stable/tutorials/plugins/running_code_in_the_editor.html): @tool scripts can run in editors; headless is not a sandbox.
 
 ## Evidence boundary
-Development target: Community Build 26.7.0.124771, Java 21 and Godot 4 source.
+Supported range: SonarQube Server 2026.1 LTA and later, Community Build 26.1 and
+later (Plugin API 13.4.3+), a Java 17+ analysis runtime and Godot 4 source.
 Unit/sensor-fixture tests and packaging do not establish server startup, actual
 scanner loading or successful Compute Engine processing. The working SonarQube
 instance must not become an implicit integration fixture. Native end-to-end

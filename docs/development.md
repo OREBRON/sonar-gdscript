@@ -1,7 +1,7 @@
 # Development and validation
 
 ## Build
-JDK 21 and Maven 3.9.x, from repository root:
+JDK 17 or newer and Maven 3.9.x, from repository root:
 
 ```sh
 mvn --batch-mode --no-transfer-progress verify
@@ -20,8 +20,10 @@ target/ and are intentionally not committed.
 
 ## Isolated integration gate (required before release)
 1. Build/inspect the JAR and its plugin/API/JDK manifest requirements.
-2. Provision disposable matching SonarQube with separate volumes and a loopback
-   port. Never reuse the working server's database or extensions volume.
+2. Provision disposable SonarQube instances with separate volumes and loopback
+   ports: the supported floor (Server 2026.1 LTA, or Community Build 26.1/26.2 as
+   a license-free stand-in with the same Plugin API 13.4.3) and the current LTA.
+   Never reuse the working server's database or extensions volume.
 3. Add the JAR to that test instance's extensions/plugins and restart only it.
 4. Wait for UP; verify installed plugin, language, rules and profile via API.
 5. Run the real existing SonarScanner on original clean/violating .gd fixtures.

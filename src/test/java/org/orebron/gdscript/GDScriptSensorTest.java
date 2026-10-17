@@ -5,9 +5,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.sonar.api.batch.fs.InputFile;
-import com.sonarsource.scanner.engine.sensor.test.fixtures.TestInputFileBuilder;
-import org.sonar.scanner.plugin.api.impl.rule.ActiveRulesBuilder;
-import com.sonarsource.scanner.engine.sensor.test.fixtures.SensorContextTester;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
+import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
+import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.rule.RuleKey;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,7 +20,7 @@ class GDScriptSensorTest {
         .setType(type).setCharset(StandardCharsets.UTF_8).setContents(content).build();
     context.fileSystem().add(file);
     var rules = new ActiveRulesBuilder();
-    if (active) rules.addRule(new org.sonar.scanner.plugin.api.impl.rule.NewActiveRule.Builder()
+    if (active) rules.addRule(new org.sonar.api.batch.rule.internal.NewActiveRule.Builder()
         .setRuleKey(RuleKey.of("gdscript", "line-length")).setLanguage("gdscript").setSeverity("MINOR").build());
     context.setActiveRules(rules.build());
     return context;

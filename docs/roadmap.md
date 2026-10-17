@@ -11,7 +11,8 @@ Gate: real unit/sensor tests pass and a plugin JAR is produced. This is not
 end-to-end server compatibility certification.
 
 ## Phase 1: isolated integration
-- Pin matching Community Build image identity; separate loopback port and volumes.
+- Pin image identities for the 2026.1 LTA floor (or Community Build 26.1/26.2,
+  same Plugin API 13.4.3) and the current LTA; separate loopback ports and volumes.
 - Install only into disposable instance; verify UP, language/rules/profile via API.
 - Scan original positive and negative .gd fixtures with the actual SonarScanner.
 - Verify exact CE task SUCCESS and expected file/rule/line; test rule deactivation.

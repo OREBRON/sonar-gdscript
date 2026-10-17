@@ -33,10 +33,27 @@ proof of valid GDScript, correct gameplay or absence of security vulnerabilities
 There is no Godot process execution, lint-tool execution, syntax highlighting,
 code-duplication engine, coverage collection or claimed GDScript metrics yet.
 
+## Compatibility
+
+| Product | Supported from | Plugin API |
+|---|---|---|
+| SonarQube Server | **2026.1 LTA**, including later releases such as 2026.5 LTA | 13.4.3 and later |
+| SonarQube Community Build | 26.1 | 13.4.3 and later |
+| Scanner/analysis JRE | Java 17 (2026.1–2026.3 scanners may still run it) | — |
+| SonarQube Cloud | not supported: it does not accept third-party plugins | — |
+
+The plugin is compiled against Plugin API 13.4.3.4290 with Java 17 bytecode and
+declares `Sonar-Version: 13.4.3`. CI runs the tests at that floor on JDK 17 and
+against the 2026.5 LTA API (14.0.0.4498) on JDK 21. These are build-level checks,
+not an end-to-end certification: an isolated server-plus-scanner smoke test is
+still required before a release. See the
+[support baseline ADR](docs/adr/0002-support-baseline-2026-1-lta.md).
+
 ## Build and test
 
-Prerequisites: JDK 21 and Maven 3.9.x. Exact dependency versions are pinned in
-[pom.xml](pom.xml); do not copy obsolete Java/API requirements from old tutorials.
+Prerequisites: JDK 17 or newer and Maven 3.9.x. Exact dependency versions are
+pinned in [pom.xml](pom.xml); do not copy obsolete Java/API requirements from
+old tutorials.
 
 ```sh
 mvn --batch-mode --no-transfer-progress verify
@@ -44,9 +61,7 @@ python3 scripts/check_docs.py
 ```
 
 The build creates a development plugin JAR under `target/`. Build success and
-sensor-fixture tests are not an end-to-end compatibility certification. The
-current development target is Community Build **26.7.0.124771**; an isolated
-server-plus-scanner smoke test is still required before a release.
+sensor-fixture tests are not an end-to-end compatibility certification.
 
 ## Installation boundary
 
@@ -64,6 +79,7 @@ private project reports, engine binaries or generated caches should be committed
 - [Local verification and remaining gaps](docs/verification.md)
 - [Development and validation](docs/development.md)
 - [ADR: native language plugin](docs/adr/0001-native-language-plugin.md)
+- [ADR: support baseline 2026.1 LTA](docs/adr/0002-support-baseline-2026-1-lta.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security boundaries](SECURITY.md)
 
