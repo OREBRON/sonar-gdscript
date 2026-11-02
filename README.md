@@ -61,9 +61,11 @@ private project reports, engine binaries or generated caches should be committed
 - [Architecture](docs/architecture.md)
 - [Rule scope and specification](docs/rules.md)
 - [Roadmap and acceptance criteria](docs/roadmap.md)
+- [Metrics plan](docs/metrics-plan.md) and [security analysis plan](docs/security-plan.md)
 - [Local verification and remaining gaps](docs/verification.md)
 - [Development and validation](docs/development.md)
 - [ADR: native language plugin](docs/adr/0001-native-language-plugin.md)
+- [ADR: hand-written lexer and parser](docs/adr/0002-hand-written-parser.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security boundaries](SECURITY.md)
 
