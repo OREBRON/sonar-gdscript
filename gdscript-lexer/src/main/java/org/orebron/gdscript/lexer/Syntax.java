@@ -1,19 +1,13 @@
 package org.orebron.gdscript.lexer;
 
 import java.util.List;
-import java.util.Set;
 
-/** GDScript lexical data: new syntax is added here, not in the scanning code. */
+/** GDScript lexical data: new syntax is added here or in Keywords, not in the scanning code. */
 final class Syntax {
   /** Longest first, so the first match is the longest operator. */
   private static final List<String> OPERATORS = List.of("**=", "<<=", ">>=", "...", "**", "<<", ">>", "==", "!=",
       "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", ":=", "..",
       "+", "-", "*", "/", "%", "<", ">", "=", "!", "~", "&", "|", "^", "(", ")", "[", "]", "{", "}", ",", ":", ";", ".");
-  private static final Set<String> KEYWORDS = Set.of("if", "elif", "else", "for", "while", "match", "break",
-      "continue", "pass", "return", "class", "class_name", "extends", "is", "in", "as", "self", "super", "signal",
-      "func", "static", "const", "enum", "var", "breakpoint", "await", "and", "or", "not", "true", "false", "null",
-      "void", "PI", "TAU", "INF", "NAN");
-  private static final Set<String> OPERAND_KEYWORDS = Set.of("self", "super", "true", "false", "null", "PI", "TAU", "INF", "NAN");
 
   private Syntax() {}
 
@@ -31,7 +25,7 @@ final class Syntax {
   static boolean endsOperand(Token token) {
     return switch (token.kind()) {
       case NUMBER, STRING, NODE_PATH -> true;
-      case IDENTIFIER -> !KEYWORDS.contains(token.text()) || OPERAND_KEYWORDS.contains(token.text());
+      case IDENTIFIER -> !Keywords.isReserved(token.text()) || Keywords.isOperand(token.text());
       case OPERATOR -> closesBracket(token.text());
       default -> false;
     };

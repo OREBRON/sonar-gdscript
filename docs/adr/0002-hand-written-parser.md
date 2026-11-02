@@ -10,9 +10,11 @@ parser backend open.
 
 ## Decision
 Write the lexer and parser by hand in Java, with no runtime dependency, and keep
-them free of Sonar types. The lexer lives in the `gdscript-lexer` Maven module,
-which has no Sonar dependency, so the module boundary enforces this. The
-contracts below are binding for M1 and M3.
+them free of Sonar types. They live in the `gdscript-lexer` and
+`gdscript-parser` Maven modules, which have no Sonar dependency, so the module
+boundaries enforce this. The contracts below are binding for M1 and M3. The
+production parser accepts exactly the same 50 of the 227 mutants as the
+prototype.
 
 Lexer contract:
 - Lossless: tokens are ordered, never overlap, and cover every non-whitespace

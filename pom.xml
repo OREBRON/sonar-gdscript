@@ -3,15 +3,18 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.orebron</groupId><artifactId>sonar-gdscript-parent</artifactId><version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging><name>GDScript analyzer</name>
-  <description>Independent GDScript analyzer: a Sonar-free lexer module and the SonarQube plugin</description>
+  <description>Independent GDScript analyzer: Sonar-free lexer and parser modules and the SonarQube plugin</description>
   <modules>
     <module>gdscript-lexer</module>
+    <module>gdscript-parser</module>
     <module>sonar-gdscript-plugin</module>
   </modules>
   <properties><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><maven.compiler.release>21</maven.compiler.release><sonar.api.version>13.8.0.4399</sonar.api.version></properties>
   <dependencyManagement>
     <dependencies>
       <dependency><groupId>org.orebron</groupId><artifactId>gdscript-lexer</artifactId><version>${project.version}</version></dependency>
+      <dependency><groupId>org.orebron</groupId><artifactId>gdscript-lexer</artifactId><version>${project.version}</version><type>test-jar</type><scope>test</scope></dependency>
+      <dependency><groupId>org.orebron</groupId><artifactId>gdscript-parser</artifactId><version>${project.version}</version></dependency>
       <dependency><groupId>org.sonarsource.api.plugin</groupId><artifactId>sonar-plugin-api</artifactId><version>${sonar.api.version}</version><scope>provided</scope></dependency>
       <dependency><groupId>org.sonarsource.scanner.engine</groupId><artifactId>sensor-test-fixtures</artifactId><version>13.4.0.3968</version><scope>test</scope></dependency>
       <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-nop</artifactId><version>1.7.36</version><scope>test</scope></dependency>
@@ -21,6 +24,7 @@
   <build>
     <pluginManagement><plugins>
       <plugin><groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId><artifactId>sonar-packaging-maven-plugin</artifactId><version>1.25.1.3002</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
     </plugins></pluginManagement>
     <plugins>
       <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
