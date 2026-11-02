@@ -25,13 +25,18 @@ Godot source (.gd)
 
 - Native `.gd` language registration, a rule repository and a default profile.
 - One intentionally simple line-length rule to prove the plugin/sensor path.
+- A Sonar-free GDScript lexer module and lexer-based size metrics (`ncloc`,
+  `ncloc_data`, `comment_lines`) with an incomplete-file metric and strict mode
+  ([metrics plan](docs/metrics-plan.md) M1). They are unit-tested only, not yet
+  verified on a SonarQube server.
 - Unit and sensor-fixture tests, Maven packaging, and documentation checks.
 - Research, architecture decisions and an acceptance-driven roadmap.
 
-The initial rule is **line-based**, not an AST parser. A passing analysis is not
-proof of valid GDScript, correct gameplay or absence of security vulnerabilities.
-There is no Godot process execution, lint-tool execution, syntax highlighting,
-code-duplication engine, coverage collection or claimed GDScript metrics yet.
+The rule is **line-based** and the metrics come from a lexer; there is no parser
+yet. A passing analysis is not proof of valid GDScript, correct gameplay or
+absence of security vulnerabilities. There is no Godot process execution,
+lint-tool execution, syntax highlighting, code-duplication engine, complexity,
+coverage collection or security analysis yet.
 
 ## Build and test
 

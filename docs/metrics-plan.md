@@ -1,8 +1,9 @@
 # Metrics analysis plan
 
-Status: **draft, not implemented.** This refines roadmap Phase 2
-("measured NCLOC/complexity") and Phase 3 (complexity-based rules). Nothing here
-is a claim that the plugin publishes metrics today.
+Status: **M1 implemented and unit-tested on 2026-11-02; its gate is not passed**,
+because the M0 harness was deferred (decision 10). M2–M4 are not implemented.
+This refines roadmap Phase 2 ("measured NCLOC/complexity") and Phase 3
+(complexity-based rules).
 
 Revised on 2026-11-01 after three rounds of independent review (Codex CLI
 0.166). One reviewer recommendation was not adopted; see decision 4.
@@ -488,4 +489,7 @@ this protocol; the harness documents which surface it uses.
    itself is still required for complete token consumption; executable-line
    data is designed together with coverage (roadmap Phase 4).
 10. **Roadmap Phase 1 is finished before substantial M1 work**, so the
-    reporting path is proven before the analyzer grows.
+    reporting path is proven before the analyzer grows. *Changed on 2026-11-02 by
+    the repository owner:* no SonarQube is available locally, so M1 was built
+    and unit-tested first. Every server-side M1 check stays open until the
+    harness exists.

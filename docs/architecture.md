@@ -9,11 +9,12 @@
 Source analysis runs next to the scanner, not as a server-side raw-project job.
 
 ## Foundation and target
-The initial sensor is line-based. It does not parse syntax, validate Godot types,
-start Godot or calculate language metrics. A future analysis engine should be
-separate from the Sonar adapter. A parser decision requires modern real-world
-Godot syntax fixtures; gdtoolkit, JVM grammars and engine diagnostics are options,
-not already integrated backends.
+The analysis engine is separate from the Sonar adapter, enforced by Maven modules:
+`gdscript-lexer` has no Sonar dependency, and `sonar-gdscript-plugin` bundles it.
+The sensor reads each file once, tokenizes it, stages size metrics and line-length
+findings, and publishes them together. It does not parse syntax, validate Godot
+types or start Godot. [ADR 0002](adr/0002-hand-written-parser.md) records the
+hand-written lexer and parser decision and its evidence.
 
 A Python parser requires a scanner-machine runtime and versioned subprocess
 contract. A JVM parser avoids Python but requires grammar maintenance. Neither

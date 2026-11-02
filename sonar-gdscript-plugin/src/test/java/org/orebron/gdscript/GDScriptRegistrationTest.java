@@ -33,17 +33,17 @@ class GDScriptRegistrationTest {
     };
     var context = new Plugin.Context(runtime);
     new GDScriptPlugin().define(context);
-    for (Class<?> extension : java.util.List.of(GDScriptLanguage.class,
-        GDScriptRules.class, GDScriptProfile.class, GDScriptSensor.class)) {
+    for (Class<?> extension : java.util.List.of(GDScriptLanguage.class, GDScriptRules.class, GDScriptProfile.class,
+        GDScriptSensor.class, GDScriptMetrics.class, IncompleteFilesComputer.class)) {
       assertTrue(context.getExtensions().contains(extension));
     }
-    org.sonar.api.config.PropertyDefinition property = null;
+    var defaults = new java.util.HashMap<String, String>();
     for (Object extension : context.getExtensions()) {
-      if (extension instanceof org.sonar.api.config.PropertyDefinition definition) property = definition;
+      if (extension instanceof org.sonar.api.config.PropertyDefinition definition) defaults.put(definition.key(), definition.defaultValue());
     }
-    assertNotNull(property);
-    assertEquals("sonar.gdscript.maxLineLength", property.key());
-    assertEquals("120", property.defaultValue());
-    assertEquals(5, context.getExtensions().size());
+    assertEquals(java.util.Map.of("sonar.gdscript.maxLineLength", "120", "sonar.gdscript.failOnIncompleteAnalysis", "false"), defaults);
+    assertEquals(8, context.getExtensions().size());
+    assertEquals(java.util.List.of("gdscript_incomplete_files"),
+        new GDScriptMetrics().getMetrics().stream().map(metric -> metric.key()).toList());
   }
 }

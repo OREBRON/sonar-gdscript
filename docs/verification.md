@@ -39,5 +39,24 @@ than inferred from these local checks.
 - Godot editor/LSP/gdlint integration; no game was executed.
 
 The existing working SonarQube was not modified or restarted by this bootstrap.
+
+## Metrics M1 (local, 2026-11-02)
+Roadmap Phase 1 was deferred because no SonarQube is available locally, so M1
+was verified by unit tests only.
+
+- Toolchain: Apache Maven 3.9.9 (archive download, SHA-512 checked) on
+  OpenJDK 27 compiling `--release 21`, with a separate local repository. This is
+  not the pinned bootstrap container.
+- `mvn -B -ntp verify`: **BUILD SUCCESS; 41 tests, 0 failures** (lexer 23,
+  sensor 12, incomplete-file computer 3, size metrics 2, registration 1).
+- The plugin JAR bundles `META-INF/lib/gdscript-lexer-0.1.0-SNAPSHOT.jar`, listed
+  under `Plugin-Dependencies`; the provided Sonar API and slf4j are not bundled.
+- The lexer produces the same token counts as the ADR 0002 prototype on all
+  eight corpus files it accepts.
+
+Not verified for M1: constructor injection of `FileLinesContextFactory`, measure
+display and `ncloc_data` on a server, `IncompleteFilesComputer` in the Compute
+Engine, quality-gate use of `gdscript_incomplete_files`, the tokei comparison
+and the performance and memory gates.
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.
