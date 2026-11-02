@@ -1,6 +1,7 @@
 package org.orebron.gdscript;
 
 import org.orebron.gdscript.metrics.SizeMetrics;
+import org.orebron.gdscript.metrics.StructureMetrics;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.error.NewAnalysisError;
@@ -22,9 +23,16 @@ final class AnalysisPublisher {
   void publish(FileAnalysis analysis) {
     InputFile file = analysis.file();
     save(file, GDScriptMetrics.INCOMPLETE_FILES, analysis.complete() ? 0 : 1);
-    if (analysis.complete()) publishSize(file, analysis.size());
-    else publishFailure(file, analysis.failure());
+    if (analysis.size() != null) publishSize(file, analysis.size());
+    if (analysis.structure() != null) publishStructure(file, analysis.structure());
+    if (!analysis.complete()) publishFailure(file, analysis.failure());
     analysis.violations().forEach(violation -> publishIssue(file, violation));
+  }
+
+  private void publishStructure(InputFile file, StructureMetrics structure) {
+    save(file, CoreMetrics.CLASSES, structure.classes());
+    save(file, CoreMetrics.FUNCTIONS, structure.functions());
+    save(file, CoreMetrics.COMPLEXITY, structure.complexity());
   }
 
   private void publishSize(InputFile file, SizeMetrics size) {

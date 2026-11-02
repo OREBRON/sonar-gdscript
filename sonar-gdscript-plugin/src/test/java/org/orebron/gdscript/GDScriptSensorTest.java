@@ -108,11 +108,13 @@ class GDScriptSensorTest {
     assertEquals(0, measure(context, "sample.gd", INCOMPLETE));
   }
 
-  @Test void publishesSizeMetricsWhetherOrNotTheRuleIsActive() {
+  @Test void publishesMetricsWhetherOrNotTheRuleIsActive() {
     var context = context(SizeFixture.content(), "gdscript", InputFile.Type.MAIN, false);
     execute(context);
     assertEquals(SizeFixture.CODE_LINES.size(), measure(context, "sample.gd", CoreMetrics.NCLOC_KEY));
     assertEquals(SizeFixture.COMMENT_LINES.size(), measure(context, "sample.gd", CoreMetrics.COMMENT_LINES_KEY));
+    assertEquals(List.of(1, 1, 1), List.of(measure(context, "sample.gd", CoreMetrics.CLASSES_KEY),
+        measure(context, "sample.gd", CoreMetrics.FUNCTIONS_KEY), measure(context, "sample.gd", CoreMetrics.COMPLEXITY_KEY)));
     assertEquals(0, measure(context, "sample.gd", INCOMPLETE));
     assertEquals(SizeFixture.CODE_LINES, nclocData.get("project:sample.gd").keySet());
     assertEquals(Set.of(1), Set.copyOf(nclocData.get("project:sample.gd").values()));
@@ -124,8 +126,22 @@ class GDScriptSensorTest {
     execute(context);
     assertEquals(0, measure(context, "sample.gd", CoreMetrics.NCLOC_KEY));
     assertEquals(0, measure(context, "sample.gd", CoreMetrics.COMMENT_LINES_KEY));
+    assertEquals(List.of(1, 0, 0), List.of(measure(context, "sample.gd", CoreMetrics.CLASSES_KEY),
+        measure(context, "sample.gd", CoreMetrics.FUNCTIONS_KEY), measure(context, "sample.gd", CoreMetrics.COMPLEXITY_KEY)));
     assertEquals(0, measure(context, "sample.gd", INCOMPLETE));
     assertTrue(nclocData.get("project:sample.gd").isEmpty());
+  }
+
+  @Test void keepsLexicalMetricsWhenParsingFails() {
+    var context = context("# list\nvar a = [1, 2\n", "gdscript", InputFile.Type.MAIN, false);
+    execute(context);
+    assertEquals(1, measure(context, "sample.gd", INCOMPLETE));
+    assertEquals(1, measure(context, "sample.gd", CoreMetrics.NCLOC_KEY));
+    assertEquals(1, measure(context, "sample.gd", CoreMetrics.COMMENT_LINES_KEY));
+    assertEquals(Set.of(2), nclocData.get("project:sample.gd").keySet());
+    assertNull(measure(context, "sample.gd", CoreMetrics.CLASSES_KEY));
+    assertNull(measure(context, "sample.gd", CoreMetrics.COMPLEXITY_KEY));
+    assertTrue(context.allAnalysisErrors().iterator().next().message().startsWith("Expected ']'"));
   }
 
   @Test void marksUntokenizableFileIncompleteAndStillChecksLineLength() {
@@ -134,6 +150,7 @@ class GDScriptSensorTest {
     assertEquals(1, measure(context, "sample.gd", INCOMPLETE));
     assertNull(measure(context, "sample.gd", CoreMetrics.NCLOC_KEY));
     assertNull(measure(context, "sample.gd", CoreMetrics.COMMENT_LINES_KEY));
+    assertNull(measure(context, "sample.gd", CoreMetrics.CLASSES_KEY));
     var error = context.allAnalysisErrors().iterator().next();
     assertTrue(error.message().startsWith("Unterminated string"), error.message());
     assertEquals(List.of(1, 8), List.of(error.location().line(), error.location().lineOffset()));

@@ -6,6 +6,7 @@
   <description>Independent line-based GDScript analyzer foundation</description>
   <dependencies>
     <dependency><groupId>org.orebron</groupId><artifactId>gdscript-lexer</artifactId></dependency>
+    <dependency><groupId>org.orebron</groupId><artifactId>gdscript-parser</artifactId></dependency>
     <dependency><groupId>org.sonarsource.api.plugin</groupId><artifactId>sonar-plugin-api</artifactId></dependency>
     <dependency><groupId>org.sonarsource.scanner.engine</groupId><artifactId>sensor-test-fixtures</artifactId></dependency>
     <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-nop</artifactId></dependency>

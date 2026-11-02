@@ -9,8 +9,8 @@ python3 scripts/check_docs.py
 ```
 
 Inspect each module's target/ test reports and the manifest of
-`sonar-gdscript-plugin/target/*.jar`, which must list the bundled lexer under
-`Plugin-Dependencies`. Building must not require
+`sonar-gdscript-plugin/target/*.jar`, which must list the bundled lexer and
+parser under `Plugin-Dependencies`. Building must not require
 a running SonarQube, Python analyzer dependencies or private game credentials.
 
 CI builds/tests on every push and pull request. Artifact storage is optional:

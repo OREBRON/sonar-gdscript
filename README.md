@@ -29,14 +29,17 @@ Godot source (.gd)
   `ncloc_data`, `comment_lines`) with an incomplete-file metric and strict mode
   ([metrics plan](docs/metrics-plan.md) M1). They are unit-tested only, not yet
   verified on a SonarQube server.
+- A Sonar-free parser module that must consume every token, and parser-based
+  `classes`, `functions` and cyclomatic `complexity` (metrics plan M3), with the
+  same unit-test-only status.
 - Unit and sensor-fixture tests, Maven packaging, and documentation checks.
 - Research, architecture decisions and an acceptance-driven roadmap.
 
-The rule is **line-based** and the metrics come from a lexer; there is no parser
-yet. A passing analysis is not proof of valid GDScript, correct gameplay or
-absence of security vulnerabilities. There is no Godot process execution,
-lint-tool execution, syntax highlighting, code-duplication engine, complexity,
-coverage collection or security analysis yet.
+The rule is **line-based**; the metrics come from the lexer and the parser. A
+passing analysis is not proof of valid GDScript, correct gameplay or absence of
+security vulnerabilities. There is no Godot process execution, lint-tool
+execution, type checking, syntax highlighting, code-duplication engine,
+cognitive complexity, coverage collection or security analysis yet.
 
 ## Build and test
 
@@ -48,9 +51,9 @@ mvn --batch-mode --no-transfer-progress verify
 python3 scripts/check_docs.py
 ```
 
-The build has two modules: `gdscript-lexer` (no Sonar dependency) and
-`sonar-gdscript-plugin`, which bundles the lexer and creates the development
-plugin JAR under `sonar-gdscript-plugin/target/`. Build success and
+The build has three modules: `gdscript-lexer` and `gdscript-parser` (no Sonar
+dependency), and `sonar-gdscript-plugin`, which bundles both and creates the
+development plugin JAR under `sonar-gdscript-plugin/target/`. Build success and
 sensor-fixture tests are not an end-to-end compatibility certification. The
 current development target is Community Build **26.7.0.124771**; an isolated
 server-plus-scanner smoke test is still required before a release.

@@ -10,11 +10,13 @@ Source analysis runs next to the scanner, not as a server-side raw-project job.
 
 ## Foundation and target
 The analysis engine is separate from the Sonar adapter, enforced by Maven modules:
-`gdscript-lexer` has no Sonar dependency, and `sonar-gdscript-plugin` bundles it.
-The sensor reads each file once, tokenizes it, stages size metrics and line-length
-findings, and publishes them together. It does not parse syntax, validate Godot
-types or start Godot. [ADR 0002](adr/0002-hand-written-parser.md) records the
-hand-written lexer and parser decision and its evidence.
+`gdscript-lexer` and `gdscript-parser` have no Sonar dependency, and
+`sonar-gdscript-plugin` bundles them. The sensor reads each file once, tokenizes
+and parses it, stages metrics and line-length findings, and publishes them
+together. The parser keeps only the constructs metrics need (`SyntaxKind`); it
+does not validate Godot types or start Godot.
+[ADR 0002](adr/0002-hand-written-parser.md) records the hand-written lexer and
+parser decision and its evidence.
 
 A Python parser requires a scanner-machine runtime and versioned subprocess
 contract. A JVM parser avoids Python but requires grammar maintenance. Neither

@@ -8,7 +8,7 @@ import org.sonar.api.measures.Metrics;
 public final class GDScriptMetrics implements Metrics {
   public static final Metric<Integer> INCOMPLETE_FILES = new Metric.Builder("gdscript_incomplete_files",
       "GDScript incomplete files", Metric.ValueType.INT)
-      .setDescription("Main GDScript files that could not be read or tokenized; their size metrics are missing")
+      .setDescription("Main GDScript files that could not be read, tokenized or parsed; some of their metrics are missing")
       .setDirection(Metric.DIRECTION_WORST).setQualitative(false).setDomain("GDScript").create();
 
   @SuppressWarnings("rawtypes")

@@ -58,5 +58,22 @@ Not verified for M1: constructor injection of `FileLinesContextFactory`, measure
 display and `ncloc_data` on a server, `IncompleteFilesComputer` in the Compute
 Engine, quality-gate use of `gdscript_incomplete_files`, the tokei comparison
 and the performance and memory gates.
+
+## Metrics M3 (local, 2026-11-02)
+Same toolchain and limits as M1.
+
+- `mvn -B -ntp verify`: **BUILD SUCCESS; 66 tests, 0 failures** (lexer 23,
+  parser 17, sensor 13, complexity examples 7, incomplete-file computer 3, size
+  metrics 2, registration 1).
+- Every valid corpus file parses with the expected class, function, accessor and
+  lambda counts; the parser-level invalid files fail at the same lines as the
+  prototype; 255 nested parentheses parse and 256 fail.
+- On the 227 ADR 0002 mutants, the production parser accepts exactly the
+  prototype's 50, which Godot judged syntactically valid.
+- All worked complexity examples of the metrics plan give the documented values.
+- The plugin JAR bundles the lexer and parser JARs under `Plugin-Dependencies`.
+
+Not verified for M3: the measures on a server, a real-project pilot with zero
+parser failures, and the gdradon comparison (gdtoolkit is not installed).
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.

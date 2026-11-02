@@ -14,7 +14,7 @@ import org.sonar.api.measures.FileLinesContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Tokenizes main GDScript files, publishes size metrics and runs the line-length rule; nothing is parsed or executed. */
+/** Tokenizes and parses main GDScript files, publishes metrics and runs the line-length rule; nothing is executed. */
 public final class GDScriptSensor implements Sensor {
   public static final String FAIL_ON_INCOMPLETE = "sonar.gdscript.failOnIncompleteAnalysis";
   private static final Logger LOG = LoggerFactory.getLogger(GDScriptSensor.class);

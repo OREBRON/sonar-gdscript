@@ -10,7 +10,7 @@ public final class GDScriptPlugin implements Plugin {
             .description("Positive Unicode code-point limit. Tabs count as one character. Applies to main GDScript files.")
             .type(PropertyType.INTEGER).defaultValue(String.valueOf(LineLengthCheck.DEFAULT_MAXIMUM)).build(),
         projectProperty(GDScriptSensor.FAIL_ON_INCOMPLETE).name("Fail on incomplete GDScript analysis")
-            .description("Fail the analysis when a main GDScript file cannot be read or tokenized, instead of only reporting it.")
+            .description("Fail the analysis when a main GDScript file cannot be read, tokenized or parsed, instead of only reporting it.")
             .type(PropertyType.BOOLEAN).defaultValue("false").build());
   }
 
