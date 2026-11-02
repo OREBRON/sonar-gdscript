@@ -1,22 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.orebron</groupId><artifactId>sonar-gdscript-plugin</artifactId><version>0.1.0-SNAPSHOT</version>
-  <packaging>sonar-plugin</packaging><name>GDScript</name>
-  <description>Independent line-based GDScript analyzer foundation</description>
+  <groupId>org.orebron</groupId><artifactId>sonar-gdscript-parent</artifactId><version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging><name>GDScript analyzer</name>
+  <description>Independent GDScript analyzer: a Sonar-free lexer module and the SonarQube plugin</description>
+  <modules>
+    <module>gdscript-lexer</module>
+    <module>sonar-gdscript-plugin</module>
+  </modules>
   <properties><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><maven.compiler.release>21</maven.compiler.release><sonar.api.version>13.8.0.4399</sonar.api.version></properties>
-  <dependencies>
-    <dependency><groupId>org.sonarsource.api.plugin</groupId><artifactId>sonar-plugin-api</artifactId><version>${sonar.api.version}</version><scope>provided</scope></dependency>
-    <dependency><groupId>org.sonarsource.scanner.engine</groupId><artifactId>sensor-test-fixtures</artifactId><version>13.4.0.3968</version><scope>test</scope></dependency>
-    <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-nop</artifactId><version>1.7.36</version><scope>test</scope></dependency>
-    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.11.4</version><scope>test</scope></dependency>
-  </dependencies>
-  <build><plugins>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-install-plugin</artifactId><version>3.1.3</version></plugin>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-deploy-plugin</artifactId><version>3.1.3</version></plugin>
-    <plugin><groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId><artifactId>sonar-packaging-maven-plugin</artifactId><version>1.25.1.3002</version><extensions>true</extensions><configuration><pluginKey>gdscript</pluginKey><pluginClass>org.orebron.gdscript.GDScriptPlugin</pluginClass><pluginApiMinVersion>13.8</pluginApiMinVersion><jreMinVersion>21</jreMinVersion><requiredForLanguages>gdscript</requiredForLanguages></configuration></plugin>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
-    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.2</version></plugin>
-  </plugins></build>
+  <dependencyManagement>
+    <dependencies>
+      <dependency><groupId>org.orebron</groupId><artifactId>gdscript-lexer</artifactId><version>${project.version}</version></dependency>
+      <dependency><groupId>org.sonarsource.api.plugin</groupId><artifactId>sonar-plugin-api</artifactId><version>${sonar.api.version}</version><scope>provided</scope></dependency>
+      <dependency><groupId>org.sonarsource.scanner.engine</groupId><artifactId>sensor-test-fixtures</artifactId><version>13.4.0.3968</version><scope>test</scope></dependency>
+      <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-nop</artifactId><version>1.7.36</version><scope>test</scope></dependency>
+      <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.11.4</version><scope>test</scope></dependency>
+    </dependencies>
+  </dependencyManagement>
+  <build>
+    <pluginManagement><plugins>
+      <plugin><groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId><artifactId>sonar-packaging-maven-plugin</artifactId><version>1.25.1.3002</version></plugin>
+    </plugins></pluginManagement>
+    <plugins>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-install-plugin</artifactId><version>3.1.3</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-deploy-plugin</artifactId><version>3.1.3</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.2</version></plugin>
+    </plugins>
+  </build>
 </project>

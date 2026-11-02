@@ -8,7 +8,9 @@ mvn --batch-mode --no-transfer-progress verify
 python3 scripts/check_docs.py
 ```
 
-Inspect target/ test reports and generated JAR manifest. Building must not require
+Inspect each module's target/ test reports and the manifest of
+`sonar-gdscript-plugin/target/*.jar`, which must list the bundled lexer under
+`Plugin-Dependencies`. Building must not require
 a running SonarQube, Python analyzer dependencies or private game credentials.
 
 CI builds/tests on every push and pull request. Artifact storage is optional:

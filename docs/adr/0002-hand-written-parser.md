@@ -36,7 +36,7 @@ Parser contract:
 ## Evidence
 A throwaway prototype (692 lines, compiled with `javac --release 21`, not
 kept) implemented both contracts. It was run on an original syntax corpus in
-`src/test/resources/fixtures/syntax/`, checked with
+`gdscript-lexer/src/test/resources/fixtures/syntax/`, checked with
 `godot --headless --check-only` (Godot 4.7.2.stable.official.ed1daf0bf):
 
 | Corpus | Files | Godot | Prototype |

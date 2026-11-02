@@ -43,7 +43,9 @@ mvn --batch-mode --no-transfer-progress verify
 python3 scripts/check_docs.py
 ```
 
-The build creates a development plugin JAR under `target/`. Build success and
+The build has two modules: `gdscript-lexer` (no Sonar dependency) and
+`sonar-gdscript-plugin`, which bundles the lexer and creates the development
+plugin JAR under `sonar-gdscript-plugin/target/`. Build success and
 sensor-fixture tests are not an end-to-end compatibility certification. The
 current development target is Community Build **26.7.0.124771**; an isolated
 server-plus-scanner smoke test is still required before a release.
