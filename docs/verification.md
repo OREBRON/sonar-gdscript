@@ -281,3 +281,13 @@ rule's open-issue count equals the local recomputation:
   project, so they are verified on the server only as registered rules.
 - The quality gate still fails on the same 8 new issues; issues of the newly
   added rules on unchanged code did not count as new.
+
+## Rule fixtures on the server (2026-11-03)
+The [rule fixtures](../its/README.md) were scanned as their own project
+(`gdscript-rule-fixtures`, 38 files, plugin of commit 93bfcd7) on the same
+server, and `scripts/verify_rule_fixtures.py` compared the published issues
+with the `# Noncompliant` markers: all 37 rules report exactly the marked lines
+(`too-many-returns`, inactive in "GDScript way", reports nothing), and no issue
+is left on the `# NOSONAR` lines of `nosonar.gd`, each of which has a finding in
+a local analysis. This is the first server evidence for the rules that found
+nothing in the private project and for NOSONAR filtering.

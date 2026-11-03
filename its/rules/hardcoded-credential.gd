@@ -1,0 +1,10 @@
+const API_KEY = "Zq8vLm2Pw4Kd"  # Noncompliant
+var db_password: String = "s3cr3tP4ss"  # Noncompliant
+var config = {"client_secret": "Zx81kQ0pLm"}  # Noncompliant
+const TOKEN_URL = "Zx81kQ0pLm"
+const CLIENT_ID = "Zx81kQ0pLm"
+const TOKEN_EXPIRED = "token_expired"
+const TOKEN_SETTING = "app/client_token"
+var password = "Enter your password"
+var auth_token = "<your-token>"
+var secret = ""

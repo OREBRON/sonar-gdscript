@@ -129,6 +129,13 @@ fixtures with fake tokens are reported; marking the test folder with
 `sonar.tests` keeps the sensor away from them. The confirmed rules (L2–L4,
 taint) are not implemented.
 
+## Rule fixtures
+
+[its/rules](../its/README.md) has one annotated GDScript file per rule.
+`RuleFixturesTest` checks every rule against its file in each build, and
+`scripts/verify_rule_fixtures.py` checks the issues a server publishes for the
+same files, including `# NOSONAR` filtering.
+
 ## Future rules
 
 Every parser-backed rule needs a stable ID, rationale, severity, location mapping,
