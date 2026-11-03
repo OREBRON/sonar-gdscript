@@ -75,5 +75,14 @@ Same toolchain and limits as M1.
 
 Not verified for M3: the measures on a server, a real-project pilot with zero
 parser failures, and the gdradon comparison (gdtoolkit is not installed).
+
+### Public corpus check (2026-11-03)
+A user scan reported `Expected end of line near ')'` across a project. The
+same error reproduced on the official demo projects
+(`godotengine/godot-demo-projects`, commit b761b4c, read-only, not committed):
+3 of 461 `.gd` files failed, all on multi-line lambdas inside brackets that end
+before `)` or `,` instead of a dedent. After the parser fix, all 461 files
+parse, the 227 ADR 0002 mutants still give exactly the same 50 accepted files,
+and `mvn verify` passes 69 tests.
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.

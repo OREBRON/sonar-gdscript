@@ -22,6 +22,7 @@ class GDScriptParserTest {
       "valid/declarations.gd, 3, 10, 2, 0",
       "valid/expressions.gd, 0, 5, 0, 6",
       "valid/extras.gd, 0, 1, 0, 0",
+      "valid/lambda_closers.gd, 0, 1, 0, 4",
       "valid/layout.gd, 0, 2, 0, 0",
       "valid/literals.gd, 0, 1, 0, 0",
       "valid/statements.gd, 0, 5, 0, 0",
@@ -45,6 +46,13 @@ class GDScriptParserTest {
   @Test void rejectsKeywordsWhereNamesAreExpected() {
     assertThrows(ParseException.class, () -> parse("var if = 1\n"));
     assertThrows(ParseException.class, () -> parse("func f():\n\treturn 1 +\n"));
+  }
+
+  @Test void rejectsClosersOutsideBrackets() {
+    for (String source : new String[]{"func f():\n\tpass)\n", "func f():\n\tpass\n\t)\n", "var a = 1,\n"}) {
+      var error = assertThrows(ParseException.class, () -> parse(source));
+      assertTrue(error.getMessage().matches("(Expected end of line|Unexpected operator).*"), error.getMessage());
+    }
   }
 
   @Test void limitsNestingDepth() throws Exception {

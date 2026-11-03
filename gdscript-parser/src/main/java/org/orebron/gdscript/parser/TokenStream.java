@@ -17,6 +17,7 @@ final class TokenStream {
   private final Deque<Boolean> skipNewlines = new ArrayDeque<>();
   private int position;
   private int consumed;
+  private int openBrackets;
 
   TokenStream(List<Token> all, BooleanSupplier cancelled) {
     this.tokens = all.stream().filter(t -> t.kind() != TokenKind.COMMENT && t.kind() != TokenKind.CONTINUATION).toList();
@@ -64,12 +65,19 @@ final class TokenStream {
   boolean atEndOfLine() { return raw().kind() == TokenKind.NEWLINE || raw().kind() == TokenKind.EOF; }
 
   /** Call after consuming an opening bracket; {@link #close} consumes the closer and restores the previous mode. */
-  void openBracket() { skipNewlines.push(true); }
+  void openBracket() {
+    skipNewlines.push(true);
+    openBrackets++;
+  }
 
   void close(String closer) throws ParseException {
     expect(closer);
     skipNewlines.pop();
+    openBrackets--;
   }
+
+  /** True inside any open bracket, including the body of a multi-line lambda written in one. */
+  boolean insideBrackets() { return openBrackets > 0; }
 
   void respectNewlines() { skipNewlines.push(false); }
   void restoreNewlines() { skipNewlines.pop(); }

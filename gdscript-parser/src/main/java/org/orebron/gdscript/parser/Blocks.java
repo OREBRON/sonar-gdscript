@@ -1,5 +1,6 @@
 package org.orebron.gdscript.parser;
 
+import java.util.Set;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
 
@@ -11,22 +12,34 @@ final class Blocks {
     void parse(int indent) throws ParseException;
   }
 
+  /** Tokens that cannot start a statement but can end an expression around a multi-line lambda. */
+  private static final Set<String> EXPRESSION_CLOSERS = Set.of(")", "]", "}", ",");
   private final Grammar grammar;
 
   Blocks(Grammar grammar) { this.grammar = grammar; }
 
   /** Items at one indentation. Stops at a dedenting NEWLINE, which is left for the enclosing block. */
   void items(int indent, Item item) throws ParseException {
+    do suite(indent, item); while (continuesAt(indent, grammar.tokens.raw()));
+  }
+
+  /**
+   * Consumes the line break when the next line continues this block. Inside brackets a lambda body, and every
+   * block in it, also ends before ')', ']', '}' or ',' on the same or the next line, as Godot allows.
+   */
+  private boolean continuesAt(int indent, Token end) throws ParseException {
     TokenStream tokens = grammar.tokens;
-    while (true) {
-      suite(indent, item);
-      Token end = tokens.raw();
-      if (end.kind() == TokenKind.EOF || (end.kind() == TokenKind.NEWLINE && end.nextIndent() < indent)) return;
-      if (end.kind() != TokenKind.NEWLINE) throw TokenStream.error(end, "Expected end of line");
-      if (end.nextIndent() > indent) throw TokenStream.error(tokens.rawAhead(1), "Unexpected indentation");
-      tokens.skipRawNewline();
-      if (tokens.raw().kind() == TokenKind.EOF) return;
-    }
+    if (end.kind() == TokenKind.EOF || closesEnclosingExpression(end)) return false;
+    if (end.kind() != TokenKind.NEWLINE) throw TokenStream.error(end, "Expected end of line");
+    Token next = tokens.rawAhead(1);
+    if (end.nextIndent() < indent || closesEnclosingExpression(next)) return false;
+    if (end.nextIndent() > indent) throw TokenStream.error(next, "Unexpected indentation");
+    tokens.skipRawNewline();
+    return next.kind() != TokenKind.EOF;
+  }
+
+  private boolean closesEnclosingExpression(Token token) {
+    return grammar.tokens.insideBrackets() && token.kind() == TokenKind.OPERATOR && EXPRESSION_CLOSERS.contains(token.text());
   }
 
   /** Items on one line, separated by ';'. */

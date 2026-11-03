@@ -34,6 +34,10 @@ Parser contract:
 - Newlines are ignored inside `()`, `[]` and `{}`, except in multi-line lambda
   bodies. A lambda body's indentation is compared with the indentation of the
   line that holds `func`.
+- Inside brackets, a lambda body and every block in it also end before `)`,
+  `]`, `}` or `,`, on the same line as the last statement or at the start of the
+  next line, whatever its indentation. Godot accepts all of these
+  (`valid/lambda_closers.gd`); none of them can start a statement.
 - One nesting counter covers blocks and expressions, with a limit of 256.
   Measured: 255 nested parentheses in a member initializer parse, 256 fail.
 
