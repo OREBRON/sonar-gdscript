@@ -47,6 +47,21 @@ class SecurityChecksTest {
     assertEquals(List.of(7), lines(new SecurityChecks.JavaScriptEvalCheck().check(file, 0)));
   }
 
+  @Test void namesResolveInTheirOwnScope() throws Exception {
+    String source = """
+        func trusted():
+        \tconst payload = "fixed"
+        \tvar OS = null
+        \tJavaScriptBridge.eval(payload)
+        func run(payload):
+        \tJavaScriptBridge.eval(payload)
+        \tOS.execute("ls", [])
+        """;
+    var file = parse(source);
+    assertEquals(List.of(6), lines(new SecurityChecks.JavaScriptEvalCheck().check(file, 0)));
+    assertEquals(List.of(7), lines(new SecurityChecks.ProcessExecutionCheck().check(file, 0)));
+  }
+
   @Test void packsDecodingAndRpc() throws Exception {
     String source = """
         @rpc("any_peer", "call_local")

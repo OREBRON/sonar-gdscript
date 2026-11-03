@@ -10,8 +10,8 @@ import org.orebron.gdscript.lexer.TokenKind;
 
 /**
  * Calls and references on engine singletons and classes, such as {@code OS.execute(...)}, as security rules match
- * them without types (security plan level L1): the receiver must be written out, must not follow a '.', and the file
- * must not declare a name that would hide it.
+ * them without types (security plan level L1): the receiver must be written out, must not follow a '.', and no
+ * declaration visible at the call may hide it.
  */
 final class Calls {
   /** A matched call; {@code arguments} holds each argument's significant tokens, empty without parentheses. */
@@ -42,10 +42,9 @@ final class Calls {
   /** {@code receiver.member} for one of the members, with its arguments when it is called. */
   List<Call> on(String receiver, Set<String> members) {
     var calls = new ArrayList<Call>();
-    if (declares(receiver)) return calls;
     for (int i = 0; i + 2 < tokens.size(); i++) {
       if (!TokenRanges.is(tokens.get(i), receiver) || !TokenRanges.is(tokens.get(i + 1), ".")) continue;
-      if (i > 0 && TokenRanges.is(tokens.get(i - 1), ".")) continue;
+      if ((i > 0 && TokenRanges.is(tokens.get(i - 1), ".")) || hidden(tokens.get(i))) continue;
       Token member = tokens.get(i + 2);
       if (members.contains(member.text())) calls.add(new Call(tokens.get(i), member, arguments(i + 3)));
     }
@@ -55,22 +54,22 @@ final class Calls {
   /** Calls of a global function, not a method on another object. */
   List<Call> global(String function) {
     var calls = new ArrayList<Call>();
-    if (declares(function)) return calls;
     for (int i = 0; i + 1 < tokens.size(); i++) {
       if (!TokenRanges.is(tokens.get(i), function) || !TokenRanges.is(tokens.get(i + 1), "(")) continue;
-      if (i > 0 && TokenRanges.is(tokens.get(i - 1), ".")) continue;
+      if ((i > 0 && TokenRanges.is(tokens.get(i - 1), ".")) || hidden(tokens.get(i))) continue;
       calls.add(new Call(tokens.get(i), tokens.get(i), arguments(i + 1)));
     }
     return calls;
   }
 
-  /** A single string literal, or the name of a constant the file declares. */
+  /** A single string literal, or a name that refers to a constant of this file. */
   boolean isConstant(List<Token> argument) {
     if (argument.size() != 1) return false;
     Token token = argument.get(0);
     if (token.kind() == TokenKind.STRING) return true;
-    return token.kind() == TokenKind.IDENTIFIER && symbols.declarations.stream()
-        .anyMatch(d -> d.text().equals(token.text()) && (d.kind == Kind.MEMBER_CONSTANT || d.kind == Kind.LOCAL_CONSTANT));
+    if (token.kind() != TokenKind.IDENTIFIER) return false;
+    Declaration declaration = symbols.declarationOf(token);
+    return declaration != null && (declaration.kind == Kind.MEMBER_CONSTANT || declaration.kind == Kind.LOCAL_CONSTANT);
   }
 
   /** The value of a single plain string literal, or null. */
@@ -83,10 +82,7 @@ final class Calls {
     return text.length() >= 2 * quote ? text.substring(quote, text.length() - quote) : null;
   }
 
-  private boolean declares(String name) {
-    for (Declaration declaration : symbols.declarations) if (declaration.text().equals(name)) return true;
-    return false;
-  }
+  private boolean hidden(Token name) { return symbols.declarationOf(name) != null; }
 
   /** The arguments of the call whose '(' is at {@code open}; empty when there is none. */
   private List<List<Token>> arguments(int open) {

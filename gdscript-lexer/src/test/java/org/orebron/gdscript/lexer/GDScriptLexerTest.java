@@ -116,6 +116,14 @@ class GDScriptLexerTest {
     assertKinds("(a) %b", OPERATOR, IDENTIFIER, OPERATOR, OPERATOR, IDENTIFIER);
   }
 
+  @Test void readsOperandsAfterMatchAndWhenKeywords() throws LexException {
+    assertKinds("match %Player:", IDENTIFIER, NODE_PATH, OPERATOR);
+    assertKinds("match .5:", IDENTIFIER, NUMBER, OPERATOR);
+    assertKinds("_ when %Player.visible:", IDENTIFIER, IDENTIFIER, NODE_PATH, OPERATOR, IDENTIFIER, OPERATOR);
+    assertKinds("x = match %b", IDENTIFIER, OPERATOR, IDENTIFIER, OPERATOR, IDENTIFIER);
+    assertKinds("x = when %b", IDENTIFIER, OPERATOR, IDENTIFIER, OPERATOR, IDENTIFIER);
+  }
+
   @Test void prefersTheLongestOperator() throws LexException {
     assertEquals(List.of("a", "**=", "b", "...", "c", "->", "d"), texts("a **= b ... c -> d"));
   }

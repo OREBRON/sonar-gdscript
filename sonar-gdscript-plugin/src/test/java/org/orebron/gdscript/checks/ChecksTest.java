@@ -226,6 +226,14 @@ class ChecksTest {
     }
   }
 
+  @Test void checksSurviveTokensOfAFileThatDidNotParse() throws Exception {
+    for (String source : new String[]{"enum", "enum Name", "func f(\n"}) {
+      var tokens = GDScriptLexer.lex(source);
+      var file = new SourceFile(source, tokens, SizeMetrics.of(tokens), null);
+      for (Check check : Checks.ALL) check.check(file, 1);
+    }
+  }
+
   @Test void rejectsInvalidLimits() {
     for (String value : new String[]{"0", "-1", "abc"}) {
       assertThrows(IllegalArgumentException.class, () -> Limit.parse("nesting-depth.max", value, 3));

@@ -112,11 +112,36 @@ public final class GDScriptLexer {
   }
 
   private boolean previousIsOperand() {
-    for (int i = tokens.size() - 1; i >= 0; i--) {
-      Token token = tokens.get(i);
-      if (!isTrivia(token)) return Syntax.endsOperand(token);
+    int previous = previousCode(tokens.size());
+    if (previous < 0) return false;
+    Token token = tokens.get(previous);
+    if (token.kind() == TokenKind.IDENTIFIER && isContextualKeyword(token.text(), previous)) return false;
+    return Syntax.endsOperand(token);
+  }
+
+  /**
+   * Like Godot's parser, {@code match} starting a statement opens a match and {@code when} after a pattern opens a
+   * guard; elsewhere both are names, so {@code x = match % 2} stays a modulo.
+   */
+  private boolean isContextualKeyword(String word, int index) {
+    if (word.equals("match")) {
+      int before = index - 1;
+      while (before >= 0 && (tokens.get(before).kind() == TokenKind.COMMENT || tokens.get(before).kind() == TokenKind.CONTINUATION)) before--;
+      return before < 0 || tokens.get(before).kind() == TokenKind.NEWLINE;
+    }
+    if (word.equals("when")) {
+      int before = previousCode(index);
+      return before >= 0 && Syntax.endsOperand(tokens.get(before));
     }
     return false;
+  }
+
+  /** The index of the last non-trivia token before {@code end}, or -1. */
+  private int previousCode(int end) {
+    for (int i = end - 1; i >= 0; i--) {
+      if (!isTrivia(tokens.get(i))) return i;
+    }
+    return -1;
   }
 
   private boolean isTrivia(Token token) {

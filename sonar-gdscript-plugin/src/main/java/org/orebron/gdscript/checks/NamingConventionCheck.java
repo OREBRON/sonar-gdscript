@@ -72,7 +72,7 @@ public final class NamingConventionCheck implements Check {
   private void enumMembers(List<Token> tokens, List<Violation> violations) {
     for (int i = 0; i < tokens.size(); i++) {
       if (!TokenRanges.is(tokens.get(i), "enum")) continue;
-      int open = TokenRanges.is(tokens.get(i + 1), "{") ? i + 1 : i + 2;
+      int open = i + 1 < tokens.size() && TokenRanges.is(tokens.get(i + 1), "{") ? i + 1 : i + 2;
       int depth = 0;
       boolean member = true;
       for (int j = open; j < tokens.size(); j++) {

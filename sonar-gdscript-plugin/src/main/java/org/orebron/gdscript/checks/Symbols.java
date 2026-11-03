@@ -196,6 +196,14 @@ final class Symbols {
     }
   }
 
+  /** The declaration an identifier refers to, or null for an engine name or a name from another file. */
+  Declaration declarationOf(Token token) {
+    if (!byName.containsKey(token.text())) return null;
+    int index = scopes.indexOf(token);
+    Declaration local = local(token, index);
+    return local != null ? local : member(token, index);
+  }
+
   /** The latest local declaration of the name visible at the token. */
   private Declaration local(Token token, int index) {
     Declaration found = null;
