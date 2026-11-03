@@ -145,11 +145,11 @@ isolated end-to-end gate needed before deployment or a compatibility claim.
 ## Highlighting, duplication tokens and NOSONAR (local, 2026-11-03)
 The sensor runs through `SensorContextTester`, which validates every saved
 range, on the 461 demo files and the private project (495 readable files):
-no file fails, and 77,781 lines carry CPD tokens. `duplicated_lines`,
-`duplicated_blocks`, the highlighted source view and NOSONAR filtering have not
-been checked on a server.
+no file fails, and 77,781 lines carry CPD tokens. The second server scan below
+shows highlighting and duplication on a server; NOSONAR filtering is still
+unchecked there, since the project has no NOSONAR comment.
 
-### Stricter parsing (local, 2026-11-03)
+## Stricter parsing (local, 2026-11-03)
 The lexer and parser now also reject what Godot 4.7.2's tokenizer and parser
 reject without a semantic model; each rule was confirmed with
 `godot --headless --check-only`:
@@ -182,3 +182,40 @@ placement and duplicates 3; `@warning_ignore_start` regions 2), name conflicts
 in a scope (8) and an identifier visually similar to a keyword (1, Unicode
 confusables data). All 12,132 `.gd` files still parse: the local Godot
 projects outside build and cache folders plus the 461 demo files.
+
+## Second server scan (2026-11-03)
+The same server, scanner and scope as the first scan, with the plugin of
+commit 1b7d7c6 (code-smell rules, highlighting, CPD tokens, stricter parsing)
+on the private project, now 502 `.gd` files. "1 language detected", the
+GDScript sensor ran in 545 ms and the Compute Engine task succeeded. Every
+measure and every rule's open-issue count equals a local recomputation with
+the same classes at the rules' default limits:
+
+| Measure | Server | Local |
+|---|---|---|
+| files | 502 | 502 |
+| ncloc | 58,764 | 58,764 |
+| comment_lines | 5,839 | 5,839 |
+| classes | 710 | 710 |
+| functions | 4,329 | 4,329 |
+| complexity | 17,687 | 17,687 |
+| gdscript_incomplete_files | 0 | 0 |
+| `gdscript:line-length` | 2,855 | 2,855 |
+| `gdscript:function-complexity` | 317 | 317 |
+| `gdscript:nesting-depth` | 103 | 103 |
+| `gdscript:function-length` | 79 | 79 |
+| `gdscript:too-many-parameters` | 3 | 3 |
+| `gdscript:task-comment` | 0 | 0 |
+
+- The new rules reached the built-in "GDScript way" profile after the plugin
+  update without manual activation.
+- Highlighting: `api/sources/lines` returns keyword, string and structured
+  comment spans for the first file (`extends`, `const`, `preload`, `static`,
+  `var`, `##` comments and string literals).
+- Duplication: the CPD executor computed blocks for 466 files (36 had none);
+  the server reports 116 `duplicated_blocks`, 3,507 `duplicated_lines` and
+  4.8 % density. These values were not checked against an oracle.
+- The quality gate failed and the scanner exited with 3 because
+  `sonar.qualitygate.wait=true`; the failing condition was not read.
+- Still not checked: NOSONAR filtering, the failing gate condition, and the
+  duplication blocks one by one.
