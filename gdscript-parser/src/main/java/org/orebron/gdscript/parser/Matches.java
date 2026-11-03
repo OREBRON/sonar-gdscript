@@ -15,8 +15,10 @@ final class Matches {
     grammar.blocks.indented(indent, this::branch);
   }
 
+  /** A branch, a standalone annotation line before one, or {@code pass} in a match without branches. */
   private void branch(int indent) throws ParseException {
     TokenStream tokens = grammar.tokens;
+    if (grammar.declarations.annotationsEndLine() || tokens.accept("pass")) return;
     Token start = tokens.peek();
     boolean catchAll = patternList();
     boolean guarded = tokens.at("when");

@@ -22,6 +22,7 @@ class GDScriptParserTest {
       "valid/declarations.gd, 3, 10, 2, 0",
       "valid/expressions.gd, 0, 5, 0, 6",
       "valid/extras.gd, 0, 1, 0, 0",
+      "valid/godot_extras.gd, 0, 3, 0, 0",
       "valid/lambda_closers.gd, 0, 1, 0, 4",
       "valid/layout.gd, 0, 2, 0, 0",
       "valid/literals.gd, 0, 1, 0, 0",
@@ -46,6 +47,13 @@ class GDScriptParserTest {
   @Test void rejectsKeywordsWhereNamesAreExpected() {
     assertThrows(ParseException.class, () -> parse("var if = 1\n"));
     assertThrows(ParseException.class, () -> parse("func f():\n\treturn 1 +\n"));
+  }
+
+  /** Accepted by Godot's own parser tests (modules/gdscript/tests/scripts) but not covered by godot_extras.gd. */
+  @Test void acceptsGodotParserFeatures() throws Exception {
+    parse("func f():\n\tvar g = (func():)\n\tg.call(func():, 1)\n");
+    parse("func f(a : = 1, b: int = 2) -> void:\n\tpass\n");
+    parse("var d = {\"a b\" = 1, c = 2}\nvar e = Vector2(1., .5)\nvar f = 5.abs()\n");
   }
 
   @Test void rejectsClosersOutsideBrackets() {

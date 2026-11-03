@@ -84,5 +84,29 @@ same error reproduced on the official demo projects
 before `)` or `,` instead of a dedent. After the parser fix, all 461 files
 parse, the 227 ADR 0002 mutants still give exactly the same 50 accepted files,
 and `mvn verify` passes 69 tests.
+
+### Godot test-suite conformance (2026-11-03)
+Godot 4.7.2's own GDScript tests (`modules/gdscript/tests/scripts`, from a local
+engine checkout, read-only) state each test's expected outcome in a `.out`
+file. Lexing plus parsing was compared with it:
+
+| Expected by Godot | Tests | Before | After the fixes |
+|---|---|---|---|
+| Syntax valid (`GDTEST_OK`, analyzer or runtime error) | 423 | 403 accepted | 423 accepted |
+| `GDTEST_PARSER_ERROR` | 73 | 40 rejected | 40 rejected |
+
+- The 20 false rejections came from 12 constructs: raw line breaks in regular
+  strings, `$%"…"`, trailing-dot floats such as `123.`, continuations across
+  comment lines, `match`, `when`, `PI`, `TAU`, `INF` and `NAN` as names,
+  `name : = value`, Lua-style dictionaries with string keys, annotations before
+  match branches, a match with only `pass`, repeated `;`, class-level strings,
+  and an empty lambda body before a closer. `valid/godot_extras.gd` covers the
+  engine-valid ones.
+- The 33 accepted parser-error tests are semantic checks Godot's parser makes
+  (for example assignment inside `if`); accepting them only affects metrics on
+  code Godot would refuse to run.
+- After the fixes: all 461 demo files, a private game project with its addons
+  (501 files, read-only) and a 13-file plugin project parse; the 227 mutants
+  still give exactly the same 50 accepted files; `mvn verify` passes 76 tests.
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.

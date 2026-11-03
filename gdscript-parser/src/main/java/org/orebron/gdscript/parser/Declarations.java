@@ -12,6 +12,10 @@ final class Declarations {
   void member(int indent) throws ParseException {
     if (annotationsEndLine()) return;
     TokenStream tokens = grammar.tokens;
+    if (tokens.atKind(TokenKind.STRING)) {
+      tokens.next(); // Godot allows strings as comments in class bodies
+      return;
+    }
     switch (keyword(tokens.peek())) {
       case "class_name" -> className();
       case "extends" -> {
@@ -64,7 +68,7 @@ final class Declarations {
       grammar.expressions.expression();
       return;
     }
-    if (tokens.accept(":")) grammar.signatures.type();
+    if (tokens.accept(":")) grammar.signatures.typeAfterColon();
     tokens.expect("=");
     grammar.expressions.expression();
   }
@@ -146,7 +150,7 @@ final class Declarations {
       grammar.expressions.expression();
       return;
     }
-    if (tokens.accept(":")) grammar.signatures.type();
+    if (tokens.accept(":")) grammar.signatures.typeAfterColon();
     if (tokens.accept("=")) grammar.expressions.expression();
   }
 

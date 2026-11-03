@@ -44,11 +44,19 @@ final class Blocks {
 
   /** Items on one line, separated by ';'. */
   void suite(int indent, Item item) throws ParseException {
-    do item.parse(indent); while (grammar.tokens.accept(";") && !grammar.tokens.atEndOfLine());
+    do item.parse(indent); while (semicolons() && !grammar.tokens.atEndOfLine());
   }
 
-  /** The body after ':': the rest of the line, or an indented block below it. */
+  /** Consumes one or more ';', as in {@code a();;; b()}; returns whether there was any. */
+  private boolean semicolons() {
+    boolean any = false;
+    while (grammar.tokens.accept(";")) any = true;
+    return any;
+  }
+
+  /** The body after ':': the rest of the line, or an indented block below it; empty before a closer, as in {@code (func():)}. */
   void body(int parentIndent, Item item) throws ParseException {
+    if (closesEnclosingExpression(grammar.tokens.raw())) return;
     if (grammar.tokens.atEndOfLine()) indented(parentIndent, item);
     else suite(parentIndent, item);
   }

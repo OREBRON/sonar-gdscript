@@ -177,10 +177,11 @@ final class Expressions {
     tokens.close("}");
   }
 
-  /** {@code key: value}, or Lua style {@code name = value}. */
+  /** {@code key: value}, or Lua style {@code name = value} and {@code "name" = value}. */
   private void dictionaryEntry() throws ParseException {
     TokenStream tokens = grammar.tokens;
-    if (tokens.atKind(TokenKind.IDENTIFIER) && TokenStream.is(tokens.rawAhead(1), "=")) {
+    boolean luaKey = tokens.atKind(TokenKind.IDENTIFIER) || tokens.atKind(TokenKind.STRING);
+    if (luaKey && TokenStream.is(tokens.rawAhead(1), "=")) {
       tokens.next();
       tokens.next();
       expression();

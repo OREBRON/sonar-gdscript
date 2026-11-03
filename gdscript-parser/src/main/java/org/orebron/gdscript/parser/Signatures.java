@@ -25,6 +25,11 @@ final class Signatures {
     if (grammar.tokens.accept("->")) type();
   }
 
+  /** The type after a consumed ':'; none in {@code name : = value}, which infers it like {@code :=}. */
+  void typeAfterColon() throws ParseException {
+    if (!grammar.tokens.at("=")) type();
+  }
+
   /** A type such as {@code int}, {@code Node.Inner} or {@code Dictionary[String, int]}; {@code void} is allowed. */
   void type() throws ParseException {
     TokenStream tokens = grammar.tokens;
@@ -55,7 +60,7 @@ final class Signatures {
       grammar.expressions.expression();
       return;
     }
-    if (tokens.accept(":")) type();
+    if (tokens.accept(":")) typeAfterColon();
     if (tokens.accept("=")) grammar.expressions.expression();
   }
 }
