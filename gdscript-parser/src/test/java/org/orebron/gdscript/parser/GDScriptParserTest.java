@@ -113,6 +113,7 @@ class GDScriptParserTest {
         \t\tvar rest:
         \t\t\tpass
         """);
+    assertEquals(1, count(script, SyntaxKind.MATCH));
     assertEquals(3, count(script, SyntaxKind.MATCH_BRANCH));
     assertEquals(2, count(script, SyntaxKind.CATCH_ALL_BRANCH));
   }

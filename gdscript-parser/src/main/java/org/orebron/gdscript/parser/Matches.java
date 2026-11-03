@@ -12,10 +12,11 @@ final class Matches {
   Matches(Grammar grammar) { this.grammar = grammar; }
 
   void match(int indent) throws ParseException {
-    grammar.tokens.expect("match");
+    grammar.tree.open(SyntaxKind.MATCH, grammar.tokens.expect("match"));
     grammar.expressions.expression();
     grammar.tokens.expect(":");
     grammar.blocks.indented(indent, this::branch);
+    grammar.tree.close();
   }
 
   /** A branch, a standalone annotation line before one, or {@code pass} in a match without branches. */

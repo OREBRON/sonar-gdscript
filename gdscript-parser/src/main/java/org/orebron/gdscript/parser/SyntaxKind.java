@@ -8,7 +8,9 @@ public enum SyntaxKind {
   SCRIPT, CLASS, FUNCTION, ACCESSOR, LAMBDA,
   /** A parameter name, kept as a child of its function, accessor or lambda. */
   PARAMETER,
-  IF, ELIF, ELSE, WHILE, FOR, MATCH_BRANCH,
+  IF, ELIF, ELSE, WHILE, FOR,
+  /** A match statement; its branches are its children. */
+  MATCH, MATCH_BRANCH,
   /** A match branch without a guard whose pattern list contains {@code _} or a bare {@code var name}. */
   CATCH_ALL_BRANCH,
   CONDITIONAL_EXPRESSION, LOGICAL_OPERATOR
