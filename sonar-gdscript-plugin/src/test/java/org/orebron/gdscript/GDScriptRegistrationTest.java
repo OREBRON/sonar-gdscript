@@ -28,7 +28,10 @@ class GDScriptRegistrationTest {
     assertEquals("gdscript", repository.language());
     var keys = new java.util.HashSet<>(java.util.Set.of("line-length", "function-complexity", "function-length",
         "too-many-parameters", "nesting-depth", "task-comment", "naming-convention", "empty-block", "commented-code",
-        "duplicate-string", "collapsible-if", "too-many-returns", "boolean-literal-comparison", "identical-branches"));
+        "duplicate-string", "collapsible-if", "too-many-returns", "boolean-literal-comparison", "identical-branches",
+        "unused-variable", "unused-local-constant", "unused-parameter", "unused-private-class-variable", "unused-signal",
+        "shadowed-variable", "unreachable-code", "unreachable-pattern", "standalone-expression", "empty-file",
+        "get-node-without-onready", "onready-with-export"));
     assertEquals(keys, repository.rules().stream().map(RulesDefinition.Rule::key).collect(java.util.stream.Collectors.toSet()));
     var parameters = new java.util.HashMap<String, String>();
     for (var rule : repository.rules()) {

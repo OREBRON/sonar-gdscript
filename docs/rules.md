@@ -63,6 +63,41 @@ findings on the demo projects and a private game project were read by hand; the
 two false-positive patterns found (prose with a parenthesis taken for a call,
 `get()` results compared with `true`) are excluded as described above.
 
+## Godot warnings
+
+Twelve rules report what Godot 4.7's GDScript warnings of the same name report,
+without the engine's type information. A semantic pass (`Scopes`, `Symbols`)
+resolves each name to the latest local declaration visible in an enclosing
+block, else to a member of the enclosing or an outer class; `a.b` on another
+object and Lua-style dictionary keys are not uses, `self.b` is, and a signal is
+also used by name in `emit_signal`, `connect`, `disconnect`, `is_connected`,
+`has_signal` and `Signal(self, ...)`. Like the editor, the rules stay silent on
+lines that `@warning_ignore("name")` covers (its line through the end of the
+next declaration's or statement's header) or that lie between
+`@warning_ignore_start("name")` and `@warning_ignore_restore("name")`.
+
+| Rule | Godot warning | Severity | Finding |
+|---|---|---|---|
+| `unused-variable` | `UNUSED_VARIABLE` | Minor | A local variable or match bind never read; names starting with `_` are left out. |
+| `unused-local-constant` | `UNUSED_LOCAL_CONSTANT` | Minor | A local constant never used; `_` names are left out. |
+| `unused-parameter` | `UNUSED_PARAMETER` | Major | A function or lambda parameter never used; `_` names and setter parameters are left out. |
+| `unused-private-class-variable` | `UNUSED_PRIVATE_CLASS_VARIABLE` | Major | A class variable whose name starts with `_` and that its class never uses. |
+| `unused-signal` | `UNUSED_SIGNAL` | Minor | A signal its class never emits, connects or refers to. |
+| `shadowed-variable` | `SHADOWED_VARIABLE` | Major | A local, parameter, loop variable or bind with the name of a member of its own class. Base classes and engine names need type data and are not checked. |
+| `unreachable-code` | `UNREACHABLE_CODE` | Major | The first statement of a block after a `return`, an `if` whose every branch including `else` returns, or a `match` with a catch-all branch whose every branch returns. Accessor bodies are left out, as in Godot. |
+| `unreachable-pattern` | `UNREACHABLE_PATTERN` | Major | Match branches after an unguarded `_` or bare `var name` branch. |
+| `standalone-expression` | `STANDALONE_EXPRESSION`, `STANDALONE_TERNARY` | Major | An expression statement that is not a call, an assignment, an `await` or a string used as a comment. |
+| `empty-file` | `EMPTY_FILE` | Minor | A script with no code. |
+| `get-node-without-onready` | `GET_NODE_DEFAULT_WITHOUT_ONREADY` | Major | A non-static class variable whose whole default value is `$Path`, `%Name`, `get_node(...)` or `self.get_node(...)`, optionally cast with `as`, without `@onready`. |
+| `onready-with-export` | `ONREADY_WITH_EXPORT` | Major | A class variable with both `@onready` and an `@export` annotation. |
+
+Godot's own tests are the reference: in the 357 GDScript tests of Godot 4.7.2
+that pass and parse, the expected `.out` files list 49 of these warnings, and
+the rules report exactly those 49 and nothing else. Godot's other warnings need
+types (`UNSAFE_*`, `INTEGER_DIVISION`, `RETURN_VALUE_DISCARDED`), flow analysis
+(`UNASSIGNED_VARIABLE`), base classes or engine names (`SHADOWED_*` beyond the
+own class), or Unicode confusables data, and are not implemented.
+
 ## Future rules
 
 Every parser-backed rule needs a stable ID, rationale, severity, location mapping,
