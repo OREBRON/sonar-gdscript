@@ -183,6 +183,33 @@ class GDScriptSensorTest {
     assertEquals(1, measure(context, "bad.gd", INCOMPLETE));
   }
 
+  @Test void reportsCodeSmellsOnTheFunctionNameWithTheRuleParameter() {
+    var context = activeRule("function-complexity", "1");
+    add(context, "sample.gd", "func busy(x):\n\tif x:\n\t\tpass\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    var issue = context.allIssues().iterator().next();
+    assertEquals(RuleKey.of("gdscript", "function-complexity"), issue.ruleKey());
+    var range = issue.primaryLocation().textRange();
+    assertEquals(List.of(1, 5, 1, 9), List.of(range.start().line(), range.start().lineOffset(), range.end().line(), range.end().lineOffset()));
+    assertEquals("Reduce the cyclomatic complexity of \"busy\" from 2 to at most 1.", issue.primaryLocation().message());
+  }
+
+  @Test void rejectsAnInvalidRuleParameter() {
+    var context = activeRule("nesting-depth", "0");
+    add(context, "sample.gd", "var a = 1\n", "gdscript", InputFile.Type.MAIN);
+    var error = assertThrows(IllegalArgumentException.class, () -> execute(context));
+    assertEquals("nesting-depth.max must be a positive integer", error.getMessage());
+  }
+
+  private SensorContextTester activeRule(String key, String max) {
+    var context = SensorContextTester.create(directory);
+    var rules = new ActiveRulesBuilder();
+    rules.addRule(new org.sonar.scanner.plugin.api.impl.rule.NewActiveRule.Builder().setRuleKey(RuleKey.of("gdscript", key))
+        .setLanguage("gdscript").setParam("max", max).build());
+    context.setActiveRules(rules.build());
+    return context;
+  }
+
   @Test void publishesNothingWhenCancelled() {
     var context = goodAndBadFiles();
     context.setCancelled(true);

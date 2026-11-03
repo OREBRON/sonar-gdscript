@@ -1,5 +1,6 @@
 package org.orebron.gdscript;
 
+import org.orebron.gdscript.checks.Violation;
 import org.orebron.gdscript.metrics.SizeMetrics;
 import org.orebron.gdscript.metrics.StructureMetrics;
 import org.sonar.api.batch.fs.InputFile;
@@ -57,9 +58,11 @@ final class AnalysisPublisher {
     }
   }
 
-  private void publishIssue(InputFile file, LineLengthCheck.Violation violation) {
-    var issue = context.newIssue().forRule(LineLengthCheck.RULE);
-    issue.at(issue.newLocation().on(file).at(file.selectLine(violation.line())).message(violation.message())).save();
+  private void publishIssue(InputFile file, Violation violation) {
+    var issue = context.newIssue().forRule(violation.rule());
+    var range = violation.column() < 0 ? file.selectLine(violation.line())
+        : file.newRange(violation.line(), violation.column(), violation.line(), violation.endColumn());
+    issue.at(issue.newLocation().on(file).at(range).message(violation.message())).save();
   }
 
   private void save(InputFile file, Metric<Integer> metric, int value) {

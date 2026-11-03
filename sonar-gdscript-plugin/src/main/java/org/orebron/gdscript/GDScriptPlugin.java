@@ -1,4 +1,5 @@
 package org.orebron.gdscript;
+import org.orebron.gdscript.checks.LineLengthCheck;
 import org.sonar.api.Plugin;
 import org.sonar.api.PropertyType;
 import org.sonar.api.config.PropertyDefinition;

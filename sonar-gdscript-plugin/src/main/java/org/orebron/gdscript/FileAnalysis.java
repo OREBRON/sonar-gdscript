@@ -2,8 +2,10 @@ package org.orebron.gdscript;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.OptionalInt;
 import java.util.function.BooleanSupplier;
+import org.orebron.gdscript.checks.ActiveCheck;
+import org.orebron.gdscript.checks.SourceFile;
+import org.orebron.gdscript.checks.Violation;
 import org.orebron.gdscript.lexer.GDScriptLexer;
 import org.orebron.gdscript.lexer.LexException;
 import org.orebron.gdscript.lexer.SourceException;
@@ -16,10 +18,10 @@ import org.sonar.api.batch.fs.InputFile;
 
 /**
  * Everything one file contributes, computed before anything is published. The outcome follows the metrics plan:
- * ANALYZED (no failure), LEXICAL_ONLY (parser failure: size but no structure) or FAILED (neither).
+ * ANALYZED (no failure), LEXICAL_ONLY (parser failure: size but no structure) or FAILED (neither). Checks still
+ * run on whatever could be read, so a text rule such as line-length reports on a file that fails to tokenize.
  */
-record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure, Failure failure,
-    List<LineLengthCheck.Violation> violations) {
+record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure, Failure failure, List<Violation> violations) {
   /** Why a file could not be analyzed completely; line 0 means there is no location. */
   record Failure(String message, int line, int column) {
     static Failure of(SourceException e) { return new Failure(e.getMessage(), e.line(), e.column()); }
@@ -28,29 +30,32 @@ record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure
   boolean complete() { return failure == null; }
 
   /** Throws CancellationException when {@code cancelled} turns true during lexing or parsing. */
-  static FileAnalysis of(InputFile file, OptionalInt maximumLineLength, BooleanSupplier cancelled) {
+  static FileAnalysis of(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {
     String content;
     try {
       content = file.contents();
     } catch (IOException e) {
       return new FileAnalysis(file, null, null, new Failure("Cannot read the file: " + e.getMessage(), 0, 0), List.of());
     }
-    var violations = maximumLineLength.isPresent()
-        ? LineLengthCheck.violations(content, maximumLineLength.getAsInt()) : List.<LineLengthCheck.Violation>of();
     try {
-      return analyzeTokens(file, new GDScriptLexer(content, cancelled).tokenize(), violations, cancelled);
+      return analyzeTokens(file, content, new GDScriptLexer(content, cancelled).tokenize(), checks, cancelled);
     } catch (LexException e) {
-      return new FileAnalysis(file, null, null, Failure.of(e), violations);
+      return new FileAnalysis(file, null, null, Failure.of(e), run(checks, new SourceFile(content, List.of(), null, null)));
     }
   }
 
-  private static FileAnalysis analyzeTokens(InputFile file, List<Token> tokens, List<LineLengthCheck.Violation> violations,
+  private static FileAnalysis analyzeTokens(InputFile file, String content, List<Token> tokens, List<ActiveCheck> checks,
       BooleanSupplier cancelled) {
     var size = SizeMetrics.of(tokens);
     try {
-      return new FileAnalysis(file, size, StructureMetrics.of(GDScriptParser.parse(tokens, cancelled)), null, violations);
+      var tree = GDScriptParser.parse(tokens, cancelled);
+      return new FileAnalysis(file, size, StructureMetrics.of(tree), null, run(checks, new SourceFile(content, tokens, size, tree)));
     } catch (ParseException e) {
-      return new FileAnalysis(file, size, null, Failure.of(e), violations);
+      return new FileAnalysis(file, size, null, Failure.of(e), run(checks, new SourceFile(content, tokens, size, null)));
     }
+  }
+
+  private static List<Violation> run(List<ActiveCheck> checks, SourceFile source) {
+    return checks.stream().flatMap(check -> check.run(source).stream()).toList();
   }
 }

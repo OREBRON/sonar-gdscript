@@ -3,10 +3,13 @@ package org.orebron.gdscript;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
+import org.orebron.gdscript.checks.ActiveCheck;
+import org.orebron.gdscript.checks.Check;
+import org.orebron.gdscript.checks.Checks;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.sensor.Sensor;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.SensorDescriptor;
@@ -14,7 +17,7 @@ import org.sonar.api.measures.FileLinesContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Tokenizes and parses main GDScript files, publishes metrics and runs the line-length rule; nothing is executed. */
+/** Tokenizes and parses main GDScript files, publishes metrics and runs the active checks; nothing is executed. */
 public final class GDScriptSensor implements Sensor {
   public static final String FAIL_ON_INCOMPLETE = "sonar.gdscript.failOnIncompleteAnalysis";
   private static final Logger LOG = LoggerFactory.getLogger(GDScriptSensor.class);
@@ -30,11 +33,11 @@ public final class GDScriptSensor implements Sensor {
   }
 
   @Override public void execute(SensorContext context) {
-    OptionalInt maximumLineLength = LineLengthCheck.maximum(context);
+    List<ActiveCheck> checks = activeChecks(context);
     var publisher = new AnalysisPublisher(context, fileLinesContextFactory);
     var incomplete = new ArrayList<FileAnalysis>();
     for (InputFile file : mainFiles(context)) {
-      Optional<FileAnalysis> analysis = analyze(context, file, maximumLineLength);
+      Optional<FileAnalysis> analysis = analyze(context, file, checks);
       if (analysis.isEmpty()) return;
       publisher.publish(analysis.get());
       if (!analysis.get().complete()) incomplete.add(analysis.get());
@@ -42,11 +45,21 @@ public final class GDScriptSensor implements Sensor {
     report(incomplete, context.config().getBoolean(FAIL_ON_INCOMPLETE).orElse(false));
   }
 
+  /** Checks whose rule is active, with their limits; settings are validated only for active rules. */
+  private static List<ActiveCheck> activeChecks(SensorContext context) {
+    var checks = new ArrayList<ActiveCheck>();
+    for (Check check : Checks.ALL) {
+      ActiveRule rule = context.activeRules().find(check.ruleKey());
+      if (rule != null) checks.add(new ActiveCheck(check, check.configuredLimit(rule, context.config())));
+    }
+    return checks;
+  }
+
   /** Empty when the analysis is cancelled; nothing of the current file is published then. */
-  private static Optional<FileAnalysis> analyze(SensorContext context, InputFile file, OptionalInt maximumLineLength) {
+  private static Optional<FileAnalysis> analyze(SensorContext context, InputFile file, List<ActiveCheck> checks) {
     if (context.isCancelled()) return Optional.empty();
     try {
-      var analysis = FileAnalysis.of(file, maximumLineLength, context::isCancelled);
+      var analysis = FileAnalysis.of(file, checks, context::isCancelled);
       return context.isCancelled() ? Optional.empty() : Optional.of(analysis);
     } catch (CancellationException e) {
       return Optional.empty();

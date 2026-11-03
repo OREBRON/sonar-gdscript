@@ -1,47 +1,40 @@
-package org.orebron.gdscript;
+package org.orebron.gdscript.checks;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalInt;
-import org.sonar.api.batch.sensor.SensorContext;
-import org.sonar.api.rule.RuleKey;
+import org.sonar.api.batch.rule.ActiveRule;
+import org.sonar.api.config.Configuration;
 
 /** The text-only line-length rule: counts Unicode code points per line; comments and strings are not exempt. */
-final class LineLengthCheck {
-  static final String MAX_LINE_LENGTH = "sonar.gdscript.maxLineLength";
-  static final RuleKey RULE = RuleKey.of("gdscript", "line-length");
-  static final int DEFAULT_MAXIMUM = 120;
+public final class LineLengthCheck implements Check {
+  public static final String MAX_LINE_LENGTH = "sonar.gdscript.maxLineLength";
+  public static final int DEFAULT_MAXIMUM = 120;
 
-  record Violation(int line, String message) {}
+  @Override public String key() { return "line-length"; }
+  @Override public String name() { return "Lines should not be too long"; }
+  @Override public String severity() { return "MINOR"; }
+  @Override public List<String> tags() { return List.of("convention"); }
 
-  private LineLengthCheck() {}
-
-  /** The configured maximum, or empty when the rule is inactive; the setting is validated only for an active rule. */
-  static OptionalInt maximum(SensorContext context) {
-    if (context.activeRules().find(RULE) == null) return OptionalInt.empty();
-    int maximum;
-    try {
-      maximum = Integer.parseInt(context.config().get(MAX_LINE_LENGTH).orElse(String.valueOf(DEFAULT_MAXIMUM)));
-    } catch (NumberFormatException e) {
-      throw invalidMaximum(e);
-    }
-    if (maximum <= 0) throw invalidMaximum(null);
-    return OptionalInt.of(maximum);
+  @Override public String htmlDescription() {
+    return "<p>Keep lines within the configured sonar.gdscript.maxLineLength limit (default 120).</p>"
+        + "<p>This text-only check counts Unicode code points, including whitespace; tabs count as one. "
+        + "Comments and strings are not exempt. No syntax or security analysis is performed.</p>";
   }
 
-  static List<Violation> violations(String content, int maximum) {
+  /** The limit is a project setting, kept for compatibility, rather than a rule parameter. */
+  @Override public int configuredLimit(ActiveRule rule, Configuration configuration) {
+    return Limit.parse(MAX_LINE_LENGTH, configuration.get(MAX_LINE_LENGTH).orElse(null), DEFAULT_MAXIMUM);
+  }
+
+  @Override public List<Violation> check(SourceFile file, int maximum) {
     var violations = new ArrayList<Violation>();
-    List<String> lines = content.lines().toList();
+    List<String> lines = file.content().lines().toList();
     for (int i = 0; i < lines.size(); i++) {
       int length = lines.get(i).codePointCount(0, lines.get(i).length());
       if (length > maximum) {
-        violations.add(new Violation(i + 1, "Shorten this line from " + length + " to at most " + maximum + " characters."));
+        violations.add(Violation.onLine(this, i + 1, "Shorten this line from " + length + " to at most " + maximum + " characters."));
       }
     }
     return violations;
-  }
-
-  private static IllegalArgumentException invalidMaximum(Throwable cause) {
-    return new IllegalArgumentException(MAX_LINE_LENGTH + " must be a positive integer", cause);
   }
 }

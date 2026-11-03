@@ -26,13 +26,21 @@ class GDScriptRegistrationTest {
     new GDScriptRules().define(rules);
     var repository = rules.repository("gdscript");
     assertEquals("gdscript", repository.language());
-    assertEquals(1, repository.rules().size());
-    assertNotNull(repository.rule("line-length"));
+    var keys = java.util.Set.of("line-length", "function-complexity", "function-length", "too-many-parameters",
+        "nesting-depth", "task-comment");
+    assertEquals(keys, repository.rules().stream().map(RulesDefinition.Rule::key).collect(java.util.stream.Collectors.toSet()));
+    var maxima = new java.util.HashMap<String, String>();
+    for (var rule : repository.rules()) {
+      if (rule.param("max") != null) maxima.put(rule.key(), rule.param("max").defaultValue());
+    }
+    assertEquals(java.util.Map.of("function-complexity", "10", "function-length", "75", "too-many-parameters", "7",
+        "nesting-depth", "3"), maxima);
     var profiles = new BuiltInQualityProfilesDefinition.Context();
     new GDScriptProfile().define(profiles);
     var profile = profiles.profile("gdscript", "GDScript way");
     assertTrue(profile.isDefault());
-    assertEquals("line-length", profile.rules().get(0).ruleKey());
+    assertEquals(keys, profile.rules().stream().map(BuiltInQualityProfilesDefinition.BuiltInActiveRule::ruleKey)
+        .collect(java.util.stream.Collectors.toSet()));
     SonarRuntime runtime = new SonarRuntime() {
       public org.sonar.api.SonarEdition getEdition() { return org.sonar.api.SonarEdition.COMMUNITY; }
       public Version getApiVersion() { return Version.parse("13.8"); }
