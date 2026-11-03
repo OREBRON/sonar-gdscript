@@ -98,6 +98,37 @@ types (`UNSAFE_*`, `INTEGER_DIVISION`, `RETURN_VALUE_DISCARDED`), flow analysis
 (`UNASSIGNED_VARIABLE`), base classes or engine names (`SHADOWED_*` beyond the
 own class), or Unicode confusables data, and are not implemented.
 
+## Security review rules
+
+The security plan's level L1 review rules (S2), without types: each matches a
+call or constant written on an engine singleton or class (`OS.execute`,
+`HashingContext.HASH_MD5`), not after a `.`, in a file that declares no name
+that would hide it. They are `VULNERABILITY` rules with a SECURITY impact
+(Minor → LOW, Major → MEDIUM) whose descriptions ask the reviewer what to rule
+out; "constant" below means a string literal or a constant the file declares.
+
+| Rule | CWE / OWASP 2021 | Severity | Finding |
+|---|---|---|---|
+| `process-execution` | — | Minor | `OS.execute`, `OS.create_process`, `OS.execute_with_pipe`; silent where `shell-command` reports. |
+| `shell-command` | 78 / A03 | Major | The same calls running a shell or interpreter (`sh`, `bash`, `cmd`, `powershell`, `python`, `node`, …, by name or path) in its command-string form (`-c`, `/C`, `-Command`, `-e`, …) with a non-constant command element in an array literal. |
+| `shell-open-dynamic` | — | Minor | `OS.shell_open` with a non-constant argument. |
+| `javascript-eval` | 95 / A03 | Major | `JavaScriptBridge.eval` with a non-constant argument. |
+| `resource-pack-loading` | 829 / A08 | Major | `ProjectSettings.load_resource_pack`. |
+| `object-decoding` | 502 / A08 | Major | `bytes_to_var_with_objects(...)` and `Marshalls.base64_to_variant(..., true)`; `get_var(true)` needs a typed receiver (L2). |
+| `rpc-any-peer` | 862 / A01 | Major | A function annotated `@rpc("any_peer", ...)`, reported on its name. |
+| `hardcoded-credential` | 798 / A07 | Major | A string of 6 or more characters without spaces assigned to a name with `password`, `passwd`, `secret`, `token`, `api key`, `private key` or `secret key` in it (`var`/`const`, assignment, dictionary key). Names ending in `id`, `url`, `path`, `name`, `setting` and the like, identifier-like values, paths, URLs and placeholders are left out. The message names the variable, never the value. |
+| `weak-hash` | 328 / A02 | Major | `HashingContext.HASH_MD5`, `HashingContext.HASH_SHA1`. |
+| `aes-ecb-reference` | 327 / A02 | Major | `AESContext.MODE_ECB_ENCRYPT`, `AESContext.MODE_ECB_DECRYPT`. |
+| `tls-unsafe-options` | 295 / A07 | Major | `TLSOptions.client_unsafe(...)`. |
+
+On the local Godot projects and the demos, every finding outside test code was
+read: process starts and `shell_open` in editor add-ons, a downloadable-content
+pack loader, multiplayer `any_peer` RPCs and a formatted `eval`. The only
+credential finding outside tests was a setting name, now excluded. Test
+fixtures with fake tokens are reported; marking the test folder with
+`sonar.tests` keeps the sensor away from them. The confirmed rules (L2–L4,
+taint) are not implemented.
+
 ## Future rules
 
 Every parser-backed rule needs a stable ID, rationale, severity, location mapping,

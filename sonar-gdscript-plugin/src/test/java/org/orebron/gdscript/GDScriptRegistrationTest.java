@@ -31,7 +31,12 @@ class GDScriptRegistrationTest {
         "duplicate-string", "collapsible-if", "too-many-returns", "boolean-literal-comparison", "identical-branches",
         "unused-variable", "unused-local-constant", "unused-parameter", "unused-private-class-variable", "unused-signal",
         "shadowed-variable", "unreachable-code", "unreachable-pattern", "standalone-expression", "empty-file",
-        "get-node-without-onready", "onready-with-export"));
+        "get-node-without-onready", "onready-with-export", "process-execution", "shell-command", "shell-open-dynamic",
+        "javascript-eval", "resource-pack-loading", "object-decoding", "rpc-any-peer", "hardcoded-credential", "weak-hash",
+        "aes-ecb-reference", "tls-unsafe-options"));
+    var shell = repository.rule("shell-command");
+    assertEquals(org.sonar.api.rules.RuleType.VULNERABILITY, shell.type());
+    assertEquals(java.util.Set.of("cwe:78", "owaspTop10-2021:a3"), shell.securityStandards());
     assertEquals(keys, repository.rules().stream().map(RulesDefinition.Rule::key).collect(java.util.stream.Collectors.toSet()));
     var parameters = new java.util.HashMap<String, String>();
     for (var rule : repository.rules()) {

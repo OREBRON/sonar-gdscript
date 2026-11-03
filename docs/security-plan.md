@@ -1,8 +1,10 @@
 # Security analysis plan
 
-Status: **draft, not implemented.** The plugin performs no security analysis
-today, and the [security policy](../SECURITY.md) statements stay true until a
-gate below passes. This plan builds on the lexer, parser, failure policy and
+Status: **S2 partly implemented on 2026-11-03, gates not passed.** Eleven L1
+review rules ship (see [rules](rules.md), "Security review rules");
+`untrusted-resource-load` waits for its proof, and S0 (server evidence), S1's
+harness questions and the corpus triage thresholds are open, so no gate below
+has passed and the [security policy](../SECURITY.md) statements stay true. This plan builds on the lexer, parser, failure policy and
 integration harness defined in the [metrics plan](metrics-plan.md), and keeps
 its rule that the analysis engine is free of Sonar types.
 

@@ -5,6 +5,8 @@ import java.util.Optional;
 import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.rule.RuleKey;
+import org.sonar.api.rules.RuleType;
+import org.sonar.api.server.rule.RulesDefinition.OwaspTop10;
 
 /**
  * One GDScript rule: the metadata that the rules definition and the profile read, and the analysis that finds
@@ -21,6 +23,15 @@ public interface Check {
   String severity();
 
   default List<String> tags() { return List.of(); }
+
+  /** Code smell unless the rule says otherwise; security rules are vulnerabilities with a SECURITY impact. */
+  default RuleType type() { return RuleType.CODE_SMELL; }
+
+  /** The CWE numbers of a security rule. */
+  default List<Integer> cwe() { return List.of(); }
+
+  /** The OWASP Top 10 2021 categories of a security rule. */
+  default List<OwaspTop10> owasp2021() { return List.of(); }
 
   /** Whether the default "GDScript way" profile activates the rule. */
   default boolean activeByDefault() { return true; }

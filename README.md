@@ -34,6 +34,10 @@ Godot source (.gd)
   signals, shadowed members, unreachable code and patterns, standalone
   expressions, empty files, and `@onready` mistakes. `@warning_ignore` is
   honoured.
+- Eleven security review rules from the [security plan](docs/security-plan.md)
+  (level L1): process execution, shell commands, `shell_open`,
+  `JavaScriptBridge.eval`, resource packs, object decoding, `any_peer` RPCs,
+  hard-coded credentials, weak hashes, AES-ECB and unsafe TLS options.
 - A Sonar-free GDScript lexer module and lexer-based size metrics (`ncloc`,
   `ncloc_data`, `comment_lines`) with an incomplete-file metric and strict mode
   ([metrics plan](docs/metrics-plan.md) M1). They are unit-tested only, not yet
@@ -50,8 +54,8 @@ The rules and metrics use lines, tokens, the parser tree and name scopes, but no
 types: Godot warnings that need types are not implemented. A passing
 analysis is not proof of valid GDScript, correct gameplay or absence of
 security vulnerabilities. There is no Godot process execution, lint-tool
-execution, type checking, cognitive complexity, coverage collection or security
-analysis yet.
+execution, type checking, cognitive complexity, coverage collection, taint
+analysis or project-context (scene) analysis yet.
 
 ## Build and test
 

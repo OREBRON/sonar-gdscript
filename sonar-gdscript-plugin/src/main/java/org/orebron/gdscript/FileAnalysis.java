@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import org.orebron.gdscript.checks.ActiveCheck;
+import org.orebron.gdscript.checks.Checks;
 import org.orebron.gdscript.checks.SourceFile;
 import org.orebron.gdscript.checks.Violation;
 import org.orebron.gdscript.lexer.GDScriptLexer;
@@ -57,6 +58,6 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
   }
 
   private static List<Violation> run(List<ActiveCheck> checks, SourceFile source) {
-    return checks.stream().flatMap(check -> check.run(source).stream()).toList();
+    return Checks.withPrecedence(checks.stream().flatMap(check -> check.run(source).stream()).toList());
   }
 }
