@@ -24,8 +24,11 @@ Godot source (.gd)
 ## Initial scope
 
 - Native `.gd` language registration, a rule repository and a default profile.
-- Six code-smell rules: line length, function complexity, function length,
-  parameter count, nesting depth and TODO/FIXME comments ([rules](docs/rules.md)).
+- Fourteen code-smell rules ([rules](docs/rules.md)): line length, function
+  complexity, function length, parameter count, nesting depth, TODO/FIXME
+  comments, naming conventions, empty blocks, commented-out code, duplicated
+  strings, collapsible ifs, too many returns (opt-in), boolean literal
+  comparisons and identical branches.
 - A Sonar-free GDScript lexer module and lexer-based size metrics (`ncloc`,
   `ncloc_data`, `comment_lines`) with an incomplete-file metric and strict mode
   ([metrics plan](docs/metrics-plan.md) M1). They are unit-tested only, not yet
@@ -38,8 +41,8 @@ Godot source (.gd)
 - Unit and sensor-fixture tests, Maven packaging, and documentation checks.
 - Research, architecture decisions and an acceptance-driven roadmap.
 
-Line length and TODO/FIXME use lines and comment tokens; the other rules and the
-metrics come from the parser tree, with no scopes or types yet. A passing
+The rules and metrics use lines, tokens and the parser tree, with no scopes or
+types yet, so rules such as unused variables are not possible yet. A passing
 analysis is not proof of valid GDScript, correct gameplay or absence of
 security vulnerabilities. There is no Godot process execution, lint-tool
 execution, type checking, cognitive complexity, coverage collection or security

@@ -22,6 +22,9 @@ public interface Check {
 
   default List<String> tags() { return List.of(); }
 
+  /** Whether the default "GDScript way" profile activates the rule. */
+  default boolean activeByDefault() { return true; }
+
   /** The rule's integer parameter, if it has one. */
   default Optional<Limit> limit() { return Optional.empty(); }
 
