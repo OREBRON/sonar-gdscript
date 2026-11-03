@@ -28,6 +28,14 @@ final class TokenStream {
   Token raw() { return tokens.get(position); }
   Token rawAhead(int count) { return tokens.get(Math.min(position + count, tokens.size() - 1)); }
 
+  /** The last consumed token other than a NEWLINE, or the current one when nothing was consumed. */
+  Token lastConsumed() {
+    for (int i = position - 1; i >= 0; i--) {
+      if (tokens.get(i).kind() != TokenKind.NEWLINE) return tokens.get(i);
+    }
+    return raw();
+  }
+
   Token peek() {
     if (skipNewlines.peek()) while (raw().kind() == TokenKind.NEWLINE) position++;
     return raw();

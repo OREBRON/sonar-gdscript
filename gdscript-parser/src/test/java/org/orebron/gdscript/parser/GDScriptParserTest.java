@@ -102,6 +102,14 @@ class GDScriptParserTest {
     assertEquals(SyntaxKind.LAMBDA, function.children().get(0).children().get(0).kind());
   }
 
+  @Test void keepsParametersElseBranchesAndLastTokens() throws Exception {
+    SyntaxNode function = parse("func f(a, b := 1):\n\tif a:\n\t\tpass\n\telse:\n\t\treturn b\nvar after = 1\n").children().get(0);
+    assertEquals(List.of(SyntaxKind.PARAMETER, SyntaxKind.PARAMETER, SyntaxKind.IF, SyntaxKind.ELSE),
+        function.children().stream().map(SyntaxNode::kind).toList());
+    assertEquals(List.of("a", "b"), function.children().stream().limit(2).map(node -> node.token().text()).toList());
+    assertEquals(List.of("b", 5), List.of(function.last().text(), function.last().line()));
+  }
+
   @Test void acceptsAnEmptyScript() throws Exception {
     SyntaxNode script = parse("");
     assertEquals(SyntaxKind.SCRIPT, script.kind());

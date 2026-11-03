@@ -1,5 +1,7 @@
 package org.orebron.gdscript.parser;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.orebron.gdscript.lexer.Keywords;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
@@ -10,15 +12,23 @@ final class Signatures {
 
   Signatures(Grammar grammar) { this.grammar = grammar; }
 
-  void parameterList() throws ParseException {
+  /** Parses {@code (parameters)} and returns the parameter names. */
+  List<Token> parameterList() throws ParseException {
     TokenStream tokens = grammar.tokens;
     tokens.expect("(");
     tokens.openBracket();
+    var names = new ArrayList<Token>();
     while (!tokens.at(")")) {
-      parameter();
+      names.add(parameter());
       if (!tokens.accept(",")) break;
     }
     tokens.close(")");
+    return names;
+  }
+
+  /** Adds a PARAMETER leaf for each name to the node being built. */
+  void keep(List<Token> parameters) {
+    parameters.forEach(name -> grammar.tree.leaf(SyntaxKind.PARAMETER, name));
   }
 
   void returnType() throws ParseException {
@@ -52,15 +62,16 @@ final class Signatures {
   }
 
   /** {@code name}, {@code name: Type}, {@code name := default}, {@code name: Type = default} or variadic {@code ...name}. */
-  private void parameter() throws ParseException {
+  private Token parameter() throws ParseException {
     TokenStream tokens = grammar.tokens;
     tokens.accept("...");
-    tokens.name();
+    Token name = tokens.name();
     if (tokens.accept(":=")) {
       grammar.expressions.expression();
-      return;
+      return name;
     }
     if (tokens.accept(":")) typeAfterColon();
     if (tokens.accept("=")) grammar.expressions.expression();
+    return name;
   }
 }

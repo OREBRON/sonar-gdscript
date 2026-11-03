@@ -69,9 +69,10 @@ final class Statements {
     branch(SyntaxKind.IF, indent);
     while (nextLineStartsWith("elif", indent)) branch(SyntaxKind.ELIF, indent);
     if (nextLineStartsWith("else", indent)) {
-      grammar.tokens.next();
+      grammar.tree.open(SyntaxKind.ELSE, grammar.tokens.next());
       grammar.tokens.expect(":");
       grammar.blocks.body(indent, this::statement);
+      grammar.tree.close();
     }
   }
 

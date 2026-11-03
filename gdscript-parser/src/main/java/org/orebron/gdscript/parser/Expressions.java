@@ -196,10 +196,11 @@ final class Expressions {
   private void lambda(Token func) throws ParseException {
     TokenStream tokens = grammar.tokens;
     if (tokens.atKind(TokenKind.IDENTIFIER)) tokens.name();
-    grammar.signatures.parameterList();
+    var parameters = grammar.signatures.parameterList();
     grammar.signatures.returnType();
     tokens.expect(":");
     grammar.tree.open(SyntaxKind.LAMBDA, func);
+    grammar.signatures.keep(parameters);
     grammar.blocks.body(func.lineIndent(), grammar.statements::statement);
     grammar.tree.close();
   }

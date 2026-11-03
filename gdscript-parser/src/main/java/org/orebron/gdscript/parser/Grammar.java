@@ -6,7 +6,7 @@ import org.orebron.gdscript.lexer.Token;
 final class Grammar {
   static final int MAX_DEPTH = 256;
   final TokenStream tokens;
-  final TreeBuilder tree = new TreeBuilder();
+  final TreeBuilder tree;
   final Blocks blocks = new Blocks(this);
   final Declarations declarations = new Declarations(this);
   final Statements statements = new Statements(this);
@@ -15,7 +15,10 @@ final class Grammar {
   final Signatures signatures = new Signatures(this);
   private int depth;
 
-  Grammar(TokenStream tokens) { this.tokens = tokens; }
+  Grammar(TokenStream tokens) {
+    this.tokens = tokens;
+    this.tree = new TreeBuilder(tokens::lastConsumed);
+  }
 
   /** One counter covers blocks and expressions (ADR 0002). */
   void enter(Token at) throws ParseException {

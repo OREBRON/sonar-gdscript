@@ -1,5 +1,6 @@
 package org.orebron.gdscript.parser;
 
+import java.util.List;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
 
@@ -117,10 +118,10 @@ final class Declarations {
     TokenStream tokens = grammar.tokens;
     tokens.expect("func");
     Token name = tokens.name();
-    grammar.signatures.parameterList();
+    List<Token> parameters = grammar.signatures.parameterList();
     grammar.signatures.returnType();
     if (!tokens.accept(":")) return; // a body-less @abstract declaration
-    body(SyntaxKind.FUNCTION, name, indent, grammar.statements::statement);
+    body(SyntaxKind.FUNCTION, name, parameters, indent, grammar.statements::statement);
   }
 
   private void innerClass(int indent) throws ParseException {
@@ -129,11 +130,12 @@ final class Declarations {
     Token name = tokens.name();
     if (tokens.accept("extends")) extendsTarget();
     tokens.expect(":");
-    body(SyntaxKind.CLASS, name, indent, this::member);
+    body(SyntaxKind.CLASS, name, List.of(), indent, this::member);
   }
 
-  private void body(SyntaxKind kind, Token token, int indent, Blocks.Item item) throws ParseException {
+  private void body(SyntaxKind kind, Token token, List<Token> parameters, int indent, Blocks.Item item) throws ParseException {
     grammar.tree.open(kind, token);
+    grammar.signatures.keep(parameters);
     grammar.blocks.body(indent, item);
     grammar.tree.close();
   }
@@ -171,8 +173,8 @@ final class Declarations {
       tokens.name(); // delegated to a named function: no body
       return;
     }
-    if (tokens.at("(")) grammar.signatures.parameterList();
+    List<Token> parameters = tokens.at("(") ? grammar.signatures.parameterList() : List.of();
     tokens.expect(":");
-    body(SyntaxKind.ACCESSOR, name, indent, grammar.statements::statement);
+    body(SyntaxKind.ACCESSOR, name, parameters, indent, grammar.statements::statement);
   }
 }
