@@ -258,3 +258,26 @@ the local recomputation:
   are new was not read.
 - About two thirds of the issues are in `tests/`, which the scan treats as main
   code because `sonar.tests` is not set. NOSONAR filtering is still unchecked.
+
+## Fourth server scan (2026-11-03)
+The plugin of commit 93bfcd7 (37 rules: the Godot-warning rules and the
+security review rules added) with the third scan's scope, 343 `.gd` files. The
+sensor ran in 1,166 ms (548 ms before the semantic rules) and the Compute
+Engine task succeeded. Measures and duplication are unchanged, and every
+rule's open-issue count equals the local recomputation:
+
+| Rule | Server | Local |
+|---|---|---|
+| open issues | 3,622 | 3,622 |
+| the eleven rules of the third scan | 3,590 | 3,590 |
+| `gdscript:unused-signal` | 12 | 12 |
+| `gdscript:shadowed-variable` | 12 | 12 |
+| `gdscript:hardcoded-credential` | 7 | 7 |
+| `gdscript:unused-variable` | 1 | 1 |
+
+- The seven `hardcoded-credential` findings are the first `VULNERABILITY`
+  issues on the server; all are fake purchase tokens in `tests/`. The other ten
+  security rules and nine of the Godot-warning rules found nothing in this
+  project, so they are verified on the server only as registered rules.
+- The quality gate still fails on the same 8 new issues; issues of the newly
+  added rules on unchanged code did not count as new.
