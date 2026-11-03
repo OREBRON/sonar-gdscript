@@ -25,9 +25,14 @@ Lexer contract:
   no indentation.
 - Tab/space mixing is an error at bracket depth 0. Inside brackets it is not
   checked, so a mixed multi-line lambda body is accepted (known limit).
-- `&"…"` and `^"…"` are string tokens; `$Path/To/Node`, `$"…"` and
-  `%Unique` are node-path tokens. `%` starts a node path only where an operand
-  may start; after an operand it is modulo.
+- `&"…"` and `^"…"` are string tokens; `$Path/To/Node`, `$"…"`, `$%"…"`,
+  `%Unique/%Inner` and `%"…"` are node-path tokens. `%` starts a node path only
+  where an operand may start; after an operand it is modulo.
+- Every string kind may contain raw line breaks; only the end of the file leaves
+  a string unterminated. A `\` continuation also carries over comment-only lines.
+  `123.` is a float, while `5.abs()` stays a member access. `match`, `when`,
+  `PI`, `TAU`, `INF` and `NAN` may be names. Each rule follows Godot 4.7.2's own
+  parser tests.
 
 Parser contract:
 - A parse succeeds only if every token is consumed; there is no recovery mode.

@@ -44,19 +44,22 @@ final class TokenScanner {
     return TokenKind.STRING;
   }
 
-  /** Raw strings scan like regular ones: a backslash still protects the next character from ending the string. */
+  /**
+   * Raw strings scan like regular ones: a backslash still protects the next character from ending the string.
+   * Godot 4.7 accepts raw line breaks in every string kind, not only in triple-quoted ones.
+   */
   private void quoted() throws LexException {
     int line = cursor.line();
     int column = cursor.column();
     String quote = String.valueOf(cursor.peek());
     String close = cursor.startsWith(quote.repeat(3)) ? quote.repeat(3) : quote;
     cursor.advance(close.length());
-    while (!cursor.startsWith(close)) stringCharacter(close.length() == 3, line, column);
+    while (!cursor.startsWith(close)) stringCharacter(line, column);
     cursor.advance(close.length());
   }
 
-  private void stringCharacter(boolean multiline, int line, int column) throws LexException {
-    if (cursor.atEnd() || (cursor.isLineBreak(0) && !multiline)) throw new LexException("Unterminated string", line, column);
+  private void stringCharacter(int line, int column) throws LexException {
+    if (cursor.atEnd()) throw new LexException("Unterminated string", line, column);
     if (cursor.peek() == '\\') {
       cursor.advance(1);
       if (cursor.atEnd()) return;
@@ -68,12 +71,17 @@ final class TokenScanner {
     if (cursor.startsWithIgnoreCase("0x")) return digits(2, c -> Character.digit(c, 16) >= 0 || c == '_');
     if (cursor.startsWithIgnoreCase("0b")) return digits(2, c -> c == '0' || c == '1' || c == '_');
     decimalDigits();
-    if (cursor.peek() == '.' && Syntax.isDigit(cursor.peek(1))) {
+    if (startsFraction()) {
       cursor.advance(1);
       decimalDigits();
     }
     exponent();
     return TokenKind.NUMBER;
+  }
+
+  /** {@code .5} after digits, or a trailing {@code .} as in {@code 123.}; {@code 5.abs()} stays a member access. */
+  private boolean startsFraction() {
+    return cursor.peek() == '.' && cursor.peek(1) != '.' && !Syntax.isIdentifierStart(cursor.codePoint(1));
   }
 
   private TokenKind digits(int prefixLength, IntPredicate digit) {
@@ -108,14 +116,15 @@ final class TokenScanner {
     return TokenKind.ANNOTATION;
   }
 
+  /** {@code $Path/To/Node}, {@code %Unique/%Inner}, or a quoted path after {@code $}, {@code %} or {@code $%}. */
   private TokenKind nodePath() throws LexException {
     cursor.advance(1);
-    if (Syntax.isQuote(cursor.peek())) {
-      quoted();
-      return TokenKind.NODE_PATH;
-    }
     do {
       if (cursor.peek() == '%') cursor.advance(1);
+      if (Syntax.isQuote(cursor.peek())) {
+        quoted();
+        return TokenKind.NODE_PATH;
+      }
       name();
     } while (continuesNodePath());
     return TokenKind.NODE_PATH;

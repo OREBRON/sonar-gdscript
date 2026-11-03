@@ -61,6 +61,26 @@ class GDScriptLexerTest {
     assertKinds("$Child/Grand $\"Spaced Path\" @export_range café", NODE_PATH, NODE_PATH, ANNOTATION, IDENTIFIER);
   }
 
+  @Test void acceptsLineBreaksInEveryStringKind() throws LexException {
+    var strings = GDScriptLexer.lex("a = \"one\ntwo\"\nb = r'x\ny'\n").stream().filter(t -> t.kind() == STRING).toList();
+    assertEquals(List.of(1, 2, 3, 4), List.of(strings.get(0).line(), strings.get(0).endLine(), strings.get(1).line(), strings.get(1).endLine()));
+  }
+
+  @Test void readsTrailingDotFloatsButKeepsMemberAccessOnIntegers() throws LexException {
+    assertEquals(List.of("f", "(", "1.", ",", "-", "1_234.", ")"), texts("f(1., -1_234.)"));
+    assertEquals(List.of("5", ".", "abs", "(", ")"), texts("5.abs()"));
+  }
+
+  @Test void readsQuotedUniqueNodePaths() throws LexException {
+    assertKinds("f($%\"Unique Name\", %\"Other\", %Hey/%Howdy)", IDENTIFIER, OPERATOR, NODE_PATH, OPERATOR, NODE_PATH,
+        OPERATOR, NODE_PATH, OPERATOR);
+  }
+
+  @Test void keepsALineContinuedAcrossCommentLines() throws LexException {
+    var tokens = GDScriptLexer.lex("if a \\\n\t\t# note\n\t\tand b:\n\tpass\n");
+    assertEquals(2, tokens.stream().filter(t -> t.kind() == NEWLINE).count());
+  }
+
   @Test void tellsUniqueNodeShorthandFromModulo() throws LexException {
     assertKinds("x = %Unique", IDENTIFIER, OPERATOR, NODE_PATH);
     assertKinds("return %Unique", IDENTIFIER, NODE_PATH);

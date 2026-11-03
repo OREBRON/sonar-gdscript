@@ -21,6 +21,8 @@ public final class GDScriptLexer {
   private int pendingNewline = -1;
   private int scanned;
   private boolean lineHasCode;
+  /** A '\' continuation waits for its next code token; comment-only lines in between do not end the line. */
+  private boolean continuing;
 
   /** {@code cancelled} is polled every 10,000 tokens; a true answer aborts with a CancellationException. */
   public GDScriptLexer(String source, BooleanSupplier cancelled) {
@@ -34,7 +36,7 @@ public final class GDScriptLexer {
   public List<Token> tokenize() throws LexException {
     startLine();
     while (!cursor.atEnd()) {
-      if (step()) startLine();
+      if (step() && !continuing) startLine();
     }
     if (lineHasCode) tokens.add(here(TokenKind.NEWLINE, 0));
     tokens.add(here(TokenKind.EOF, 0));
@@ -65,17 +67,18 @@ public final class GDScriptLexer {
   }
 
   private void endLine() {
-    if (lineHasCode) {
+    if (lineHasCode && !continuing) {
       pendingNewline = tokens.size();
       tokens.add(here(TokenKind.NEWLINE, cursor.lineBreakLength()));
     }
     cursor.newline();
-    lineHasCode = false;
+    if (!continuing) lineHasCode = false;
   }
 
   private void continuation() {
     trivia(TokenKind.CONTINUATION, 1);
     cursor.newline();
+    continuing = true;
   }
 
   private void trivia(TokenKind kind, int length) {
@@ -92,6 +95,7 @@ public final class GDScriptLexer {
     tokens.add(new Token(kind, text, start, line, column, cursor.line(), cursor.column(), lineIndent, 0));
     if (kind == TokenKind.OPERATOR) trackDepth(text);
     lineHasCode = true;
+    continuing = false;
     checkCancelled();
   }
 
