@@ -135,6 +135,9 @@ final class Expressions {
 
   private void identifier(Token token) throws ParseException {
     if (token.text().equals("func")) lambda(token);
+    else if (token.text().equals("preload")) {
+      if (!grammar.tokens.at("(")) throw TokenStream.error(token, "Expected \"(\" after \"preload\"");
+    }
     else if (Keywords.isReserved(token.text()) && !Keywords.isOperand(token.text())) throw TokenStream.error(token, "Unexpected keyword");
   }
 
@@ -201,7 +204,7 @@ final class Expressions {
     tokens.expect(":");
     grammar.tree.open(SyntaxKind.LAMBDA, func);
     grammar.signatures.keep(parameters);
-    grammar.blocks.body(func.lineIndent(), grammar.statements::statement);
+    grammar.functionBody("", func.lineIndent(), grammar.statements::statement);
     grammar.tree.close();
   }
 }

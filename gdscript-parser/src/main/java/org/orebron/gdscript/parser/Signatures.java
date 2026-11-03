@@ -12,14 +12,32 @@ final class Signatures {
 
   Signatures(Grammar grammar) { this.grammar = grammar; }
 
-  /** Parses {@code (parameters)} and returns the parameter names. */
-  List<Token> parameterList() throws ParseException {
+  /** Parses {@code (parameters)} of a function, accessor or lambda and returns the parameter names. */
+  List<Token> parameterList() throws ParseException { return parameterList(false); }
+
+  /** Signal parameters have neither defaults nor a rest parameter. */
+  void signalParameterList() throws ParseException { parameterList(true); }
+
+  /** Godot's order rules: optional parameters come last, and a rest parameter {@code ...name} ends the list. */
+  private List<Token> parameterList(boolean signal) throws ParseException {
     TokenStream tokens = grammar.tokens;
     tokens.expect("(");
     tokens.openBracket();
     var names = new ArrayList<Token>();
+    boolean optional = false;
+    boolean rest = false;
     while (!tokens.at(")")) {
-      names.add(parameter());
+      if (rest) throw TokenStream.error(tokens.peek(), "Cannot have parameters after the rest parameter");
+      Token dots = tokens.peek();
+      rest = tokens.accept("...");
+      if (rest && signal) throw TokenStream.error(dots, "Signals cannot have a rest parameter");
+      Token name = tokens.name();
+      boolean hasDefault = typeAndDefault();
+      if (hasDefault && signal) throw TokenStream.error(name, "Signal parameters cannot have a default value");
+      if (hasDefault && rest) throw TokenStream.error(name, "The rest parameter cannot have a default value");
+      if (!hasDefault && !rest && optional) throw TokenStream.error(name, "Cannot have mandatory parameters after optional parameters");
+      optional |= hasDefault;
+      names.add(name);
       if (!tokens.accept(",")) break;
     }
     tokens.close(")");
@@ -61,17 +79,16 @@ final class Signatures {
     tokens.close("]");
   }
 
-  /** {@code name}, {@code name: Type}, {@code name := default}, {@code name: Type = default} or variadic {@code ...name}. */
-  private Token parameter() throws ParseException {
+  /** What follows a parameter name: {@code : Type}, {@code := default} or {@code : Type = default}; true with a default. */
+  private boolean typeAndDefault() throws ParseException {
     TokenStream tokens = grammar.tokens;
-    tokens.accept("...");
-    Token name = tokens.name();
     if (tokens.accept(":=")) {
       grammar.expressions.expression();
-      return name;
+      return true;
     }
     if (tokens.accept(":")) typeAfterColon();
-    if (tokens.accept("=")) grammar.expressions.expression();
-    return name;
+    if (!tokens.accept("=")) return false;
+    grammar.expressions.expression();
+    return true;
   }
 }

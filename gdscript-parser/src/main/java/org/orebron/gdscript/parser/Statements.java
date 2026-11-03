@@ -8,6 +8,7 @@ import org.orebron.gdscript.lexer.TokenKind;
 final class Statements {
   private static final Set<String> ASSIGNMENTS = Set.of("=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", "&=", "|=", "^=");
   private static final Set<String> SIMPLE_STATEMENT_ENDS = Set.of(";", ")", ",", "]", "}");
+  private static final Set<String> CONSTRUCTORS = Set.of("_init", "_static_init");
   private final Grammar grammar;
 
   Statements(Grammar grammar) { this.grammar = grammar; }
@@ -16,7 +17,12 @@ final class Statements {
     if (grammar.declarations.annotationsEndLine()) return;
     TokenStream tokens = grammar.tokens;
     switch (Declarations.keyword(tokens.peek())) {
-      case "pass", "break", "continue", "breakpoint" -> tokens.next();
+      case "pass", "breakpoint" -> tokens.next();
+      case "break", "continue" -> loopJump();
+      case "assert" -> {
+        tokens.next();
+        grammar.expressions.arguments();
+      }
       case "return" -> returnStatement();
       case "var" -> grammar.declarations.variable(indent, false);
       case "const" -> grammar.declarations.constant();
@@ -28,9 +34,16 @@ final class Statements {
     }
   }
 
+  private void loopJump() throws ParseException {
+    Token jump = grammar.tokens.next();
+    if (!grammar.inLoop()) throw TokenStream.error(jump, "Cannot use \"" + jump.text() + "\" outside of a loop");
+  }
+
   private void returnStatement() throws ParseException {
-    grammar.tokens.next();
-    if (!endsSimpleStatement()) grammar.expressions.expression();
+    Token token = grammar.tokens.next();
+    if (endsSimpleStatement()) return;
+    if (CONSTRUCTORS.contains(grammar.function())) throw TokenStream.error(token, "Constructor cannot return a value");
+    grammar.expressions.expression();
   }
 
   private boolean endsSimpleStatement() {
@@ -40,6 +53,8 @@ final class Statements {
   }
 
   private void expressionStatement() throws ParseException {
+    Token start = grammar.tokens.peek();
+    if (TokenStream.is(start, "func")) throw TokenStream.error(start, "Standalone lambdas cannot be accessed");
     grammar.expressions.expression();
     Token token = grammar.tokens.peek();
     if (token.kind() == TokenKind.OPERATOR && ASSIGNMENTS.contains(token.text())) {
@@ -54,7 +69,7 @@ final class Statements {
     if (kind == SyntaxKind.FOR) loopVariable();
     grammar.expressions.expression();
     tokens.expect(":");
-    grammar.blocks.body(indent, this::statement);
+    grammar.loopBody(indent, this::statement);
     grammar.tree.close();
   }
 

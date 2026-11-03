@@ -56,7 +56,7 @@ class GDScriptLexerTest {
 
   @Test void classifiesLiteralForms() throws LexException {
     assertKinds("&\"name\" ^\"A/B\" r'raw\\'q' \"\"\"a\nb\"\"\" 'it\\'s'", STRING, STRING, STRING, STRING, STRING);
-    assertKinds("0xFF_FF 0b1010 1_000 1.5e-3 2E+10 1e", NUMBER, NUMBER, NUMBER, NUMBER, NUMBER, NUMBER, IDENTIFIER);
+    assertKinds("0xFF_FF 0b1010 1_000 1.5e-3 2E+10 123.e4 1_000.000_1e1_0", NUMBER, NUMBER, NUMBER, NUMBER, NUMBER, NUMBER, NUMBER);
     assertKinds("x = .5", IDENTIFIER, OPERATOR, NUMBER);
     assertKinds("$Child/Grand $\"Spaced Path\" @export_range café", NODE_PATH, NODE_PATH, ANNOTATION, IDENTIFIER);
   }
@@ -66,9 +66,37 @@ class GDScriptLexerTest {
     assertEquals(List.of(1, 2, 3, 4), List.of(strings.get(0).line(), strings.get(0).endLine(), strings.get(1).line(), strings.get(1).endLine()));
   }
 
-  @Test void readsTrailingDotFloatsButKeepsMemberAccessOnIntegers() throws LexException {
+  @Test void readsTrailingDotFloats() throws LexException {
     assertEquals(List.of("f", "(", "1.", ",", "-", "1_234.", ")"), texts("f(1., -1_234.)"));
-    assertEquals(List.of("5", ".", "abs", "(", ")"), texts("5.abs()"));
+  }
+
+  /** Each case was checked with Godot 4.7.2 {@code --check-only}. */
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "var a = \"x \\h\"| Invalid escape in string| 11",
+      "var a = \"\\u00g1\"| Invalid hexadecimal digit| 13",
+      "var a = \"x\u202Ey\"| Invisible text direction control| 10",
+      "var a = 1__2| Multiple underscores| 10",
+      "var a = 1.2__3| Multiple underscores| 12",
+      "var a = 1e1__0| Multiple underscores| 12",
+      "var a = 0x_F| Unexpected underscore after \"0x\"| 10",
+      "var a = 0b| Expected binary digit| 10",
+      "var a = 10._5| Unexpected underscore after decimal point| 11",
+      "var a = 1e| Expected exponent value| 10",
+      "var a = 1.5.x| Cannot use a decimal point twice| 11",
+      "var a = 0xF.1| Cannot use a decimal point in a hexadecimal number| 11",
+      "var a = 5.abs()| Invalid numeric notation| 10",
+      "var a = $A/23| Identifier expected| 11",
+      "var a = $A / 2| Identifier expected| 13"})
+  void rejectsWhatGodotsTokenizerRejects(String source, String message, int column) {
+    var error = assertThrows(LexException.class, () -> GDScriptLexer.lex(source));
+    assertTrue(error.getMessage().startsWith(message.strip()), error.getMessage());
+    assertEquals(column, error.column());
+  }
+
+  @Test void acceptsGodotsEscapesAndNodePathSpacing() throws LexException {
+    assertKinds("\"\\a\\b\\f\\n\\r\\t\\v\\'\\\"\\\\ \\u00e9 \\U01F600\" r\"\\h\" \"x\\\ny\"", STRING, STRING, STRING);
+    assertEquals(List.of("$ A / B", "$\"A\"/B", "$A", "/=", "2"), texts("$ A / B $\"A\"/B $A /= 2"));
   }
 
   @Test void readsQuotedUniqueNodePaths() throws LexException {

@@ -102,9 +102,8 @@ file. Lexing plus parsing was compared with it:
   match branches, a match with only `pass`, repeated `;`, class-level strings,
   and an empty lambda body before a closer. `valid/godot_extras.gd` covers the
   engine-valid ones.
-- The 33 accepted parser-error tests are semantic checks Godot's parser makes
-  (for example assignment inside `if`); accepting them only affects metrics on
-  code Godot would refuse to run.
+- The 33 accepted parser-error tests were checks Godot's parser makes beyond
+  the grammar. 14 of them no longer pass (see "Stricter parsing" below).
 - After the fixes: all 461 demo files, a private game project with its addons
   (501 files, read-only) and a 13-file plugin project parse; the 227 mutants
   still give exactly the same 50 accepted files; `mvn verify` passes 76 tests.
@@ -149,3 +148,37 @@ range, on the 461 demo files and the private project (495 readable files):
 no file fails, and 77,781 lines carry CPD tokens. `duplicated_lines`,
 `duplicated_blocks`, the highlighted source view and NOSONAR filtering have not
 been checked on a server.
+
+### Stricter parsing (local, 2026-11-03)
+The lexer and parser now also reject what Godot 4.7.2's tokenizer and parser
+reject without a semantic model; each rule was confirmed with
+`godot --headless --check-only`:
+
+- Strings: escapes other than Godot's (`\a \b \f \n \r \t \v \' \" \\`,
+  `\uXXXX`, `\UXXXXXX`, an escaped line break) outside raw strings, and
+  invisible text direction controls.
+- Numbers: adjacent `_` separators, `0x_`/`0b_`, `10._5`, a missing exponent,
+  a second decimal point, a decimal point in hex or binary, and a letter right
+  after a number, so `5.abs()` is an error while `123.e4` is a float.
+- Node paths: a `/` after a path segment continues the path, spaces allowed,
+  so `$A/23` and `$A / 2` are errors; `/=` still ends the path.
+- `assert`, `preload`, `namespace`, `trait` and `yield` are keywords.
+- Parameters: none after a rest parameter, no default on it, no mandatory
+  parameter after an optional one; signal parameters have neither.
+- `break`/`continue` outside a loop (a lambda body starts outside), a value
+  returned from `_init`/`_static_init`, a non-static or parameterized
+  `_static_init`, and a standalone lambda statement.
+- Match patterns: a variable bind in a multi-pattern branch, `..` outside an
+  array or dictionary pattern, `..` before the last element or as a value.
+
+| Expected by Godot | Tests | Before | Now |
+|---|---|---|---|
+| Syntax valid | 423 | 423 accepted | 423 accepted |
+| `GDTEST_PARSER_ERROR` | 73 | 40 rejected | 54 rejected |
+
+The 19 still accepted need a semantic model or engine data: annotations (10:
+unknown names and wrong targets 5, which depend on the Godot version;
+placement and duplicates 3; `@warning_ignore_start` regions 2), name conflicts
+in a scope (8) and an identifier visually similar to a keyword (1, Unicode
+confusables data). All 12,132 `.gd` files still parse: the local Godot
+projects outside build and cache folders plus the 461 demo files.

@@ -53,7 +53,36 @@ class GDScriptParserTest {
   @Test void acceptsGodotParserFeatures() throws Exception {
     parse("func f():\n\tvar g = (func():)\n\tg.call(func():, 1)\n");
     parse("func f(a : = 1, b: int = 2) -> void:\n\tpass\n");
-    parse("var d = {\"a b\" = 1, c = 2}\nvar e = Vector2(1., .5)\nvar f = 5.abs()\n");
+    parse("var d = {\"a b\" = 1, c = 2}\nvar e = Vector2(1., .5)\nvar f = 123.e4\n");
+    parse("func f(a, b = 1, ...rest):\n\tassert(a, \"x\")\n\tvar r = preload(\"res://r.gd\")\n\tfor i in a:\n\t\tmatch i:\n\t\t\t1:\n\t\t\t\tbreak\n");
+    parse("func _init():\n\tvar g = func(): return 1\n\treturn\nstatic func _static_init():\n\tpass\n");
+    parse("func f(x):\n\tmatch x:\n\t\t[var a, ..]:\n\t\t\tpass\n\t\t{1: var b, ..}:\n\t\t\tpass\n\t\t[1, ..], 2:\n\t\t\tpass\n");
+  }
+
+  /** Errors Godot's parser reports without a semantic model; each case was checked with Godot 4.7.2 {@code --check-only}. */
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "func f(...a, b):\\n\\tpass| Cannot have parameters after the rest parameter",
+      "func f(...a = []):\\n\\tpass| The rest parameter cannot have a default value",
+      "func f(a = 1, b):\\n\\tpass| Cannot have mandatory parameters after optional parameters",
+      "signal s(a = 1)| Signal parameters cannot have a default value",
+      "signal s(...a)| Signals cannot have a rest parameter",
+      "func f():\\n\\tbreak| Cannot use \"break\" outside of a loop",
+      "func f():\\n\\tfor i in 2:\\n\\t\\tvar g = func():\\n\\t\\t\\tcontinue| Cannot use \"continue\" outside of a loop",
+      "func _init():\\n\\treturn 1| Constructor cannot return a value",
+      "func _static_init():\\n\\tpass| Static constructor must be declared static",
+      "static func _static_init(a):\\n\\tpass| Static constructor cannot have parameters",
+      "func f():\\n\\tfunc g():\\n\\t\\tpass| Standalone lambdas cannot be accessed",
+      "func f(x):\\n\\tmatch x:\\n\\t\\t[[var a]], 2:\\n\\t\\t\\tpass| Cannot use a variable bind with multiple patterns",
+      "func f(x):\\n\\tmatch x:\\n\\t\\t..:\\n\\t\\t\\tpass| Rest pattern can only be used inside array and dictionary patterns",
+      "func f(x):\\n\\tmatch x:\\n\\t\\t[.., 1]:\\n\\t\\t\\tpass| The \"..\" pattern must be the last element in the pattern array",
+      "func f(x):\\n\\tmatch x:\\n\\t\\t{.., 1}:\\n\\t\\t\\tpass| The \"..\" pattern must be the last element in the pattern dictionary",
+      "func f(x):\\n\\tmatch x:\\n\\t\\t{1: ..}:\\n\\t\\t\\tpass| The \"..\" pattern cannot be used as a value",
+      "var yield = 1| Expected an identifier",
+      "var a = preload| Expected \"(\" after \"preload\""})
+  void rejectsWhatGodotsParserRejects(String source, String message) {
+    var error = assertThrows(ParseException.class, () -> parse(source.replace("\\n", "\n").replace("\\t", "\t") + "\n"));
+    assertTrue(error.getMessage().startsWith(message.strip()), error.getMessage());
   }
 
   @Test void rejectsClosersOutsideBrackets() {

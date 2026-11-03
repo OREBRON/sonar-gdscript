@@ -14,6 +14,9 @@ final class Grammar {
   final Expressions expressions = new Expressions(this);
   final Signatures signatures = new Signatures(this);
   private int depth;
+  /** Godot's statement context: whether break and continue are allowed, and the enclosing function's name. */
+  private boolean inLoop;
+  private String function = "";
 
   Grammar(TokenStream tokens) {
     this.tokens = tokens;
@@ -26,4 +29,26 @@ final class Grammar {
   }
 
   void leave() { depth--; }
+
+  boolean inLoop() { return inLoop; }
+
+  String function() { return function; }
+
+  /** A function, accessor, lambda or class body: break and continue reset, and {@code name} is "" when unnamed. */
+  void functionBody(String name, int indent, Blocks.Item item) throws ParseException {
+    boolean outerLoop = inLoop;
+    String outerFunction = function;
+    inLoop = false;
+    function = name;
+    blocks.body(indent, item);
+    inLoop = outerLoop;
+    function = outerFunction;
+  }
+
+  void loopBody(int indent, Blocks.Item item) throws ParseException {
+    boolean outerLoop = inLoop;
+    inLoop = true;
+    blocks.body(indent, item);
+    inLoop = outerLoop;
+  }
 }

@@ -30,9 +30,10 @@ Lexer contract:
   where an operand may start; after an operand it is modulo.
 - Every string kind may contain raw line breaks; only the end of the file leaves
   a string unterminated. A `\` continuation also carries over comment-only lines.
-  `123.` is a float, while `5.abs()` stays a member access. `match`, `when`,
-  `PI`, `TAU`, `INF` and `NAN` may be names. Each rule follows Godot 4.7.2's own
-  parser tests.
+  `123.` and `123.e4` are floats, and `5.abs()` is an error, as in Godot's
+  tokenizer. `match`, `when`, `PI`, `TAU`, `INF` and `NAN` may be names. Each
+  rule follows Godot 4.7.2's own parser tests; the stricter checks are listed
+  in [verification](../verification.md).
 
 Parser contract:
 - A parse succeeds only if every token is consumed; there is no recovery mode.

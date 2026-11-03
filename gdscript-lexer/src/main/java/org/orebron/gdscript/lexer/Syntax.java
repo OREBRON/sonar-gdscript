@@ -34,6 +34,12 @@ final class Syntax {
   static boolean isQuote(char c) { return c == '"' || c == '\''; }
   static boolean isStringPrefix(char c) { return c == 'r' || c == '&' || c == '^'; }
   static boolean isDigit(char c) { return c >= '0' && c <= '9'; }
+  static boolean isHexDigit(int c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
+
+  /** Bidirectional controls that Godot rejects inside strings because they hide what the code does. */
+  static boolean isTextDirectionControl(char c) {
+    return c == 0x200E || c == 0x200F || (c >= 0x202A && c <= 0x202E) || (c >= 0x2066 && c <= 0x2069);
+  }
   static boolean isIdentifierStart(int codePoint) { return codePoint == '_' || Character.isUnicodeIdentifierStart(codePoint); }
 
   static boolean isIdentifierPart(int codePoint) {

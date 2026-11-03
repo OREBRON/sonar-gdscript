@@ -5,6 +5,8 @@ import java.util.function.IntPredicate;
 
 /** Scans one non-trivia token at the cursor and reports its kind; it knows nothing about lines or blocks. */
 final class TokenScanner {
+  private static final IntPredicate DECIMAL = c -> Syntax.isDigit((char) c);
+  private static final String SIMPLE_ESCAPES = "abfnrtv'\"\\";
   private final Cursor cursor;
   private final BooleanSupplier previousIsOperand;
 
@@ -39,65 +41,116 @@ final class TokenScanner {
   }
 
   private TokenKind string() throws LexException {
+    boolean raw = cursor.peek() == 'r';
     if (!Syntax.isQuote(cursor.peek())) cursor.advance(1);
-    quoted();
+    quoted(raw);
     return TokenKind.STRING;
   }
 
   /**
-   * Raw strings scan like regular ones: a backslash still protects the next character from ending the string.
-   * Godot 4.7 accepts raw line breaks in every string kind, not only in triple-quoted ones.
+   * Godot 4.7 accepts raw line breaks in every string kind, not only in triple-quoted ones. Outside raw strings a
+   * backslash must start one of Godot's escapes; in raw strings it still protects the next character.
    */
-  private void quoted() throws LexException {
+  private void quoted(boolean raw) throws LexException {
     int line = cursor.line();
     int column = cursor.column();
     String quote = String.valueOf(cursor.peek());
     String close = cursor.startsWith(quote.repeat(3)) ? quote.repeat(3) : quote;
     cursor.advance(close.length());
-    while (!cursor.startsWith(close)) stringCharacter(line, column);
+    while (!cursor.startsWith(close)) stringCharacter(line, column, raw);
     cursor.advance(close.length());
   }
 
-  private void stringCharacter(int line, int column) throws LexException {
+  private void stringCharacter(int line, int column, boolean raw) throws LexException {
     if (cursor.atEnd()) throw new LexException("Unterminated string", line, column);
+    if (Syntax.isTextDirectionControl(cursor.peek())) throw cursor.error("Invisible text direction control character in a string");
     if (cursor.peek() == '\\') {
+      if (!raw) {
+        escape(line, column);
+        return;
+      }
       cursor.advance(1);
       if (cursor.atEnd()) return;
     }
     if (cursor.isLineBreak(0)) cursor.newline(); else cursor.advance(1);
   }
 
-  private TokenKind number() {
-    if (cursor.startsWithIgnoreCase("0x")) return digits(2, c -> Character.digit(c, 16) >= 0 || c == '_');
-    if (cursor.startsWithIgnoreCase("0b")) return digits(2, c -> c == '0' || c == '1' || c == '_');
-    decimalDigits();
-    if (startsFraction()) {
+  /** One escape after a backslash, as Godot's tokenizer reads it; an escaped line break continues the string. */
+  private void escape(int line, int column) throws LexException {
+    int escapeColumn = cursor.column();
+    cursor.advance(1);
+    if (cursor.atEnd()) return; // the string is unterminated
+    if (cursor.isLineBreak(0)) {
+      cursor.newline();
+      return;
+    }
+    char code = cursor.peek();
+    cursor.advance(1);
+    if (code == 'u' || code == 'U') hexEscape(code == 'U' ? 6 : 4, line, column);
+    else if (SIMPLE_ESCAPES.indexOf(code) < 0) throw new LexException("Invalid escape in string", cursor.line(), escapeColumn);
+  }
+
+  private void hexEscape(int digits, int line, int column) throws LexException {
+    for (int i = 0; i < digits; i++) {
+      if (cursor.atEnd()) throw new LexException("Unterminated string", line, column);
+      if (!Syntax.isHexDigit(cursor.peek())) throw cursor.error("Invalid hexadecimal digit in unicode escape sequence");
       cursor.advance(1);
-      decimalDigits();
+    }
+  }
+
+  /** Follows Godot's tokenizer: a {@code .} after digits is a decimal point, so {@code 5.abs()} is an error. */
+  private TokenKind number() throws LexException {
+    if (cursor.startsWithIgnoreCase("0x")) return prefixed("0x", "hexadecimal", Syntax::isHexDigit);
+    if (cursor.startsWithIgnoreCase("0b")) return prefixed("0b", "binary", c -> c == '0' || c == '1');
+    boolean fraction = cursor.peek() == '.';
+    if (fraction) cursor.advance(1);
+    digits(DECIMAL);
+    if (!fraction && startsFraction()) {
+      cursor.advance(1);
+      if (cursor.peek() == '_') throw cursor.error("Unexpected underscore after decimal point");
+      digits(DECIMAL);
+      fraction = true;
     }
     exponent();
-    return TokenKind.NUMBER;
+    if (fraction && startsFraction()) throw cursor.error("Cannot use a decimal point twice in a number");
+    return endOfNumber();
   }
 
-  /** {@code .5} after digits, or a trailing {@code .} as in {@code 123.}; {@code 5.abs()} stays a member access. */
-  private boolean startsFraction() {
-    return cursor.peek() == '.' && cursor.peek(1) != '.' && !Syntax.isIdentifierStart(cursor.codePoint(1));
+  /** A {@code .} not starting {@code ..}; Godot reads it as a decimal point even before a letter. */
+  private boolean startsFraction() { return cursor.peek() == '.' && cursor.peek(1) != '.'; }
+
+  private TokenKind prefixed(String prefix, String base, IntPredicate digit) throws LexException {
+    cursor.advance(prefix.length());
+    if (cursor.peek() == '_') throw cursor.error("Unexpected underscore after \"" + prefix + "\"");
+    if (!digits(digit)) throw cursor.error("Expected " + base + " digit after \"" + prefix + "\"");
+    if (startsFraction()) throw cursor.error("Cannot use a decimal point in a " + base + " number");
+    return endOfNumber();
   }
 
-  private TokenKind digits(int prefixLength, IntPredicate digit) {
-    cursor.advance(prefixLength);
-    cursor.skipWhile(digit);
-    return TokenKind.NUMBER;
+  /** Digits with single {@code _} separators; returns whether there was a digit. */
+  private boolean digits(IntPredicate digit) throws LexException {
+    boolean any = false;
+    boolean underscore = false;
+    while (digit.test(cursor.peek()) || cursor.peek() == '_') {
+      boolean separator = cursor.peek() == '_';
+      if (separator && underscore) throw cursor.error("Multiple underscores cannot be adjacent in a numeric literal");
+      underscore = separator;
+      any |= !separator;
+      cursor.advance(1);
+    }
+    return any;
   }
 
-  private void decimalDigits() { cursor.skipWhile(c -> Syntax.isDigit((char) c) || c == '_'); }
-
-  private void exponent() {
+  private void exponent() throws LexException {
     if (cursor.peek() != 'e' && cursor.peek() != 'E') return;
-    int sign = cursor.peek(1) == '+' || cursor.peek(1) == '-' ? 1 : 0;
-    if (!Syntax.isDigit(cursor.peek(1 + sign))) return;
-    cursor.advance(1 + sign);
-    decimalDigits();
+    cursor.advance(cursor.peek(1) == '+' || cursor.peek(1) == '-' ? 2 : 1);
+    if (!Syntax.isDigit(cursor.peek())) throw cursor.error("Expected exponent value after \"e\"");
+    digits(DECIMAL);
+  }
+
+  private TokenKind endOfNumber() throws LexException {
+    if (!cursor.atEnd() && Syntax.isIdentifierPart(cursor.codePoint())) throw cursor.error("Invalid numeric notation");
+    return TokenKind.NUMBER;
   }
 
   private TokenKind identifier() throws LexException {
@@ -116,24 +169,31 @@ final class TokenScanner {
     return TokenKind.ANNOTATION;
   }
 
-  /** {@code $Path/To/Node}, {@code %Unique/%Inner}, or a quoted path after {@code $}, {@code %} or {@code $%}. */
+  /**
+   * {@code $Path/To/Node}, {@code %Unique/%Inner} or quoted segments, as Godot's parser reads them from tokens: spaces
+   * may follow {@code $} and surround {@code /}, and every {@code /} except {@code /=} continues the path.
+   */
   private TokenKind nodePath() throws LexException {
     cursor.advance(1);
+    cursor.advance(spacesAhead(0));
     do {
       if (cursor.peek() == '%') cursor.advance(1);
-      if (Syntax.isQuote(cursor.peek())) {
-        quoted();
-        return TokenKind.NODE_PATH;
-      }
-      name();
+      if (Syntax.isQuote(cursor.peek())) quoted(false); else name();
     } while (continuesNodePath());
     return TokenKind.NODE_PATH;
   }
 
   private boolean continuesNodePath() {
-    boolean continues = cursor.peek() == '/' && (cursor.peek(1) == '%' || Syntax.isIdentifierStart(cursor.codePoint(1)));
-    if (continues) cursor.advance(1);
+    int slash = spacesAhead(0);
+    boolean continues = cursor.peek(slash) == '/' && cursor.peek(slash + 1) != '=';
+    if (continues) cursor.advance(slash + 1 + spacesAhead(slash + 1));
     return continues;
+  }
+
+  private int spacesAhead(int from) {
+    int ahead = from;
+    while (cursor.peek(ahead) == ' ' || cursor.peek(ahead) == '\t') ahead++;
+    return ahead - from;
   }
 
   private TokenKind operator() throws LexException {

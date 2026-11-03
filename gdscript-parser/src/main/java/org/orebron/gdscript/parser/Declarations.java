@@ -28,7 +28,7 @@ final class Declarations {
       case "const" -> constant();
       case "static" -> staticMember(indent);
       case "var" -> variable(indent, true);
-      case "func" -> function(indent);
+      case "func" -> function(indent, false);
       case "class" -> innerClass(indent);
       case "pass" -> tokens.next();
       default -> throw TokenStream.error(tokens.peek(), "Unexpected token in class body");
@@ -89,7 +89,7 @@ final class Declarations {
   private void signal() throws ParseException {
     grammar.tokens.next();
     grammar.tokens.name();
-    if (grammar.tokens.at("(")) grammar.signatures.parameterList();
+    if (grammar.tokens.at("(")) grammar.signatures.signalParameterList();
   }
 
   private void enumeration() throws ParseException {
@@ -109,16 +109,20 @@ final class Declarations {
   private void staticMember(int indent) throws ParseException {
     TokenStream tokens = grammar.tokens;
     tokens.next();
-    if (tokens.at("func")) function(indent);
+    if (tokens.at("func")) function(indent, true);
     else if (tokens.at("var")) variable(indent, true);
     else throw TokenStream.error(tokens.peek(), "Expected func or var after static");
   }
 
-  private void function(int indent) throws ParseException {
+  private void function(int indent, boolean isStatic) throws ParseException {
     TokenStream tokens = grammar.tokens;
     tokens.expect("func");
     Token name = tokens.name();
     List<Token> parameters = grammar.signatures.parameterList();
+    if (name.text().equals("_static_init")) {
+      if (!isStatic) throw TokenStream.error(name, "Static constructor must be declared static");
+      if (!parameters.isEmpty()) throw TokenStream.error(name, "Static constructor cannot have parameters");
+    }
     grammar.signatures.returnType();
     if (!tokens.accept(":")) return; // a body-less @abstract declaration
     body(SyntaxKind.FUNCTION, name, parameters, indent, grammar.statements::statement);
@@ -136,7 +140,7 @@ final class Declarations {
   private void body(SyntaxKind kind, Token token, List<Token> parameters, int indent, Blocks.Item item) throws ParseException {
     grammar.tree.open(kind, token);
     grammar.signatures.keep(parameters);
-    grammar.blocks.body(indent, item);
+    grammar.functionBody(kind == SyntaxKind.FUNCTION ? token.text() : "", indent, item);
     grammar.tree.close();
   }
 
