@@ -6,6 +6,9 @@ public final class GDScriptPlugin implements Plugin {
   @Override public void define(Context context) {
     context.addExtensions(GDScriptLanguage.class, GDScriptRules.class, GDScriptProfile.class, GDScriptSensor.class,
         GDScriptMetrics.class, IncompleteFilesComputer.class,
+        projectProperty(GDScriptLanguage.FILE_SUFFIXES_KEY).name("GDScript file suffixes")
+            .description("Comma-separated suffixes of GDScript files. The scanner uses this setting to detect the language.")
+            .multiValues(true).defaultValue(GDScriptLanguage.DEFAULT_FILE_SUFFIXES).build(),
         projectProperty(LineLengthCheck.MAX_LINE_LENGTH).name("Maximum GDScript line length")
             .description("Positive Unicode code-point limit. Tabs count as one character. Applies to main GDScript files.")
             .type(PropertyType.INTEGER).defaultValue(String.valueOf(LineLengthCheck.DEFAULT_MAXIMUM)).build(),

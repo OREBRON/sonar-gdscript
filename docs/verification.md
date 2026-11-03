@@ -108,5 +108,16 @@ file. Lexing plus parsing was compared with it:
 - After the fixes: all 461 demo files, a private game project with its addons
   (501 files, read-only) and a 13-file plugin project parse; the 227 mutants
   still give exactly the same 50 accepted files; `mvn verify` passes 76 tests.
+
+### First server scan (2026-11-03)
+A proof-of-concept scan used Community Build 26.7.0.124771, SonarScanner CLI
+8.3.0.16463 (scanner engine 13.1.3.3768), `sonar.inclusions=**/*.gd` and the
+installed plugin. The scanner indexed the 501 `.gd` files but reported
+"0 languages detected", so it never downloaded the plugin: no GDScript sensor
+ran and no measures were saved. The engine's `DefaultLanguagesLoader` takes
+suffixes only from `sonar.<language>.file.suffixes`, which the plugin did not
+define. The plugin now defines `sonar.gdscript.file.suffixes` (default `.gd`)
+and `GDScriptLanguage` reads it; the rescan with that JAR is still open.
+
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.

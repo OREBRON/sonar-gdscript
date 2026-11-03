@@ -1,5 +1,6 @@
 package org.orebron.gdscript;
 
+import com.sonarsource.scanner.engine.sensor.test.fixtures.TestConfigurationImpl;
 import org.junit.jupiter.api.Test;
 import org.sonar.api.Plugin;
 import org.sonar.api.SonarRuntime;
@@ -11,9 +12,16 @@ import org.sonar.api.server.profile.BuiltInQualityProfilesDefinition;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GDScriptRegistrationTest {
+  @Test void languageSuffixesComeFromTheSettingTheScannerReads() {
+    var configuration = TestConfigurationImpl.build();
+    var language = new GDScriptLanguage(configuration);
+    assertEquals("gdscript", language.getKey());
+    assertArrayEquals(new String[]{".gd"}, language.getFileSuffixes());
+    configuration.setProperty("sonar.gdscript.file.suffixes", ".gd, .gdscript ,");
+    assertArrayEquals(new String[]{".gd", ".gdscript"}, language.getFileSuffixes());
+  }
+
   @Test void registersLanguageRuleProfileAndSensor() {
-    assertEquals("gdscript", new GDScriptLanguage().getKey());
-    assertArrayEquals(new String[]{".gd"}, new GDScriptLanguage().getFileSuffixes());
     var rules = new RulesDefinition.Context();
     new GDScriptRules().define(rules);
     var repository = rules.repository("gdscript");
@@ -41,8 +49,9 @@ class GDScriptRegistrationTest {
     for (Object extension : context.getExtensions()) {
       if (extension instanceof org.sonar.api.config.PropertyDefinition definition) defaults.put(definition.key(), definition.defaultValue());
     }
-    assertEquals(java.util.Map.of("sonar.gdscript.maxLineLength", "120", "sonar.gdscript.failOnIncompleteAnalysis", "false"), defaults);
-    assertEquals(8, context.getExtensions().size());
+    assertEquals(java.util.Map.of("sonar.gdscript.file.suffixes", ".gd", "sonar.gdscript.maxLineLength", "120",
+        "sonar.gdscript.failOnIncompleteAnalysis", "false"), defaults);
+    assertEquals(9, context.getExtensions().size());
     assertEquals(java.util.List.of("gdscript_incomplete_files"),
         new GDScriptMetrics().getMetrics().stream().map(metric -> metric.key()).toList());
   }
