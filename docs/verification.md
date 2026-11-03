@@ -117,7 +117,28 @@ installed plugin. The scanner indexed the 501 `.gd` files but reported
 ran and no measures were saved. The engine's `DefaultLanguagesLoader` takes
 suffixes only from `sonar.<language>.file.suffixes`, which the plugin did not
 define. The plugin now defines `sonar.gdscript.file.suffixes` (default `.gd`)
-and `GDScriptLanguage` reads it; the rescan with that JAR is still open.
+and `GDScriptLanguage` reads it.
+
+Rescan with that JAR (commit 3d951c1): "1 language detected in 501
+preprocessed files", the GDScript sensor ran in 354 ms, the Compute Engine task
+succeeded and the quality gate passed. The project measures on the server equal
+a local recomputation with the same lexer, parser and metric classes:
+
+| Measure | Server | Local |
+|---|---|---|
+| files | 501 | 501 |
+| ncloc | 58,640 | 58,640 |
+| comment_lines | 5,811 | 5,811 |
+| classes | 709 | 709 |
+| functions | 4,321 | 4,321 |
+| complexity | 17,653 | 17,653 |
+| gdscript_incomplete_files | 0 | 0 |
+| open `gdscript:line-length` issues | 2,851 | 2,851 lines over 120 |
+
+This also shows, on this server, that the scanner injects
+`FileLinesContextFactory` and that `IncompleteFilesComputer` writes the
+project value. Still not checked: `ncloc_data` line by line, quality-gate use of
+`gdscript_incomplete_files`, and a parser or lexer failure seen on the server.
 
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.
