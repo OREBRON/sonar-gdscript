@@ -13,19 +13,25 @@ import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.sensor.Sensor;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.SensorDescriptor;
+import org.sonar.api.issue.NoSonarFilter;
 import org.sonar.api.measures.FileLinesContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Tokenizes and parses main GDScript files, publishes metrics and runs the active checks; nothing is executed. */
+/**
+ * Tokenizes and parses main GDScript files, publishes metrics, highlighting and duplication tokens, and runs the active
+ * checks; nothing is executed.
+ */
 public final class GDScriptSensor implements Sensor {
   public static final String FAIL_ON_INCOMPLETE = "sonar.gdscript.failOnIncompleteAnalysis";
   private static final Logger LOG = LoggerFactory.getLogger(GDScriptSensor.class);
   private static final int REPORTED_FILES = 20;
   private final FileLinesContextFactory fileLinesContextFactory;
+  private final NoSonarFilter noSonarFilter;
 
-  public GDScriptSensor(FileLinesContextFactory fileLinesContextFactory) {
+  public GDScriptSensor(FileLinesContextFactory fileLinesContextFactory, NoSonarFilter noSonarFilter) {
     this.fileLinesContextFactory = fileLinesContextFactory;
+    this.noSonarFilter = noSonarFilter;
   }
 
   @Override public void describe(SensorDescriptor descriptor) {
@@ -34,7 +40,7 @@ public final class GDScriptSensor implements Sensor {
 
   @Override public void execute(SensorContext context) {
     List<ActiveCheck> checks = activeChecks(context);
-    var publisher = new AnalysisPublisher(context, fileLinesContextFactory);
+    var publisher = new AnalysisPublisher(context, fileLinesContextFactory, noSonarFilter);
     var incomplete = new ArrayList<FileAnalysis>();
     for (InputFile file : mainFiles(context)) {
       Optional<FileAnalysis> analysis = analyze(context, file, checks);

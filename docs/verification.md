@@ -142,3 +142,10 @@ project value. Still not checked: `ncloc_data` line by line, quality-gate use of
 
 The [roadmap](roadmap.md) and [development guide](development.md) define the
 isolated end-to-end gate needed before deployment or a compatibility claim.
+
+## Highlighting, duplication tokens and NOSONAR (local, 2026-11-03)
+The sensor runs through `SensorContextTester`, which validates every saved
+range, on the 461 demo files and the private project (495 readable files):
+no file fails, and 77,781 lines carry CPD tokens. `duplicated_lines`,
+`duplicated_blocks`, the highlighted source view and NOSONAR filtering have not
+been checked on a server.

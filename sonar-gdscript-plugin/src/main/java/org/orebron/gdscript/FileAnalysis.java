@@ -20,8 +20,9 @@ import org.sonar.api.batch.fs.InputFile;
  * Everything one file contributes, computed before anything is published. The outcome follows the metrics plan:
  * ANALYZED (no failure), LEXICAL_ONLY (parser failure: size but no structure) or FAILED (neither). Checks still
  * run on whatever could be read, so a text rule such as line-length reports on a file that fails to tokenize.
+ * Tokens are empty when the file could not be read or tokenized.
  */
-record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure, Failure failure, List<Violation> violations) {
+record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, StructureMetrics structure, Failure failure, List<Violation> violations) {
   /** Why a file could not be analyzed completely; line 0 means there is no location. */
   record Failure(String message, int line, int column) {
     static Failure of(SourceException e) { return new Failure(e.getMessage(), e.line(), e.column()); }
@@ -35,12 +36,12 @@ record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure
     try {
       content = file.contents();
     } catch (IOException e) {
-      return new FileAnalysis(file, null, null, new Failure("Cannot read the file: " + e.getMessage(), 0, 0), List.of());
+      return new FileAnalysis(file, List.of(), null, null, new Failure("Cannot read the file: " + e.getMessage(), 0, 0), List.of());
     }
     try {
       return analyzeTokens(file, content, new GDScriptLexer(content, cancelled).tokenize(), checks, cancelled);
     } catch (LexException e) {
-      return new FileAnalysis(file, null, null, Failure.of(e), run(checks, new SourceFile(content, List.of(), null, null)));
+      return new FileAnalysis(file, List.of(), null, null, Failure.of(e), run(checks, new SourceFile(content, List.of(), null, null)));
     }
   }
 
@@ -49,9 +50,9 @@ record FileAnalysis(InputFile file, SizeMetrics size, StructureMetrics structure
     var size = SizeMetrics.of(tokens);
     try {
       var tree = GDScriptParser.parse(tokens, cancelled);
-      return new FileAnalysis(file, size, StructureMetrics.of(tree), null, run(checks, new SourceFile(content, tokens, size, tree)));
+      return new FileAnalysis(file, tokens, size, StructureMetrics.of(tree), null, run(checks, new SourceFile(content, tokens, size, tree)));
     } catch (ParseException e) {
-      return new FileAnalysis(file, size, null, Failure.of(e), run(checks, new SourceFile(content, tokens, size, null)));
+      return new FileAnalysis(file, tokens, size, null, Failure.of(e), run(checks, new SourceFile(content, tokens, size, null)));
     }
   }
 

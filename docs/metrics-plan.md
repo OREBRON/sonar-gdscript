@@ -1,8 +1,9 @@
 # Metrics analysis plan
 
-Status: **M1 and M3 implemented and unit-tested on 2026-11-02; their gates are
-not passed**, because the M0 harness was deferred (decision 10) and the pilot,
-tokei and gdradon comparisons have not run. M2 and M4 are not implemented.
+Status: **M1 and M3 implemented and unit-tested on 2026-11-02, M2 on
+2026-11-03; their gates are not passed**, because the M0 harness was deferred
+(decision 10) and the pilot, tokei and gdradon comparisons and the server-side
+duplication checks have not run. M4 is not implemented.
 This refines roadmap Phase 2 ("measured NCLOC/complexity") and Phase 3
 (complexity-based rules).
 

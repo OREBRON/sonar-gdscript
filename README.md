@@ -33,6 +33,8 @@ Godot source (.gd)
 - A Sonar-free parser module that must consume every token, and parser-based
   `classes`, `functions` and cyclomatic `complexity` (metrics plan M3), with the
   same unit-test-only status.
+- Syntax highlighting, duplication tokens (metrics plan M2) and `# NOSONAR`
+  suppression, all from the lexer's tokens; unit-tested only.
 - Unit and sensor-fixture tests, Maven packaging, and documentation checks.
 - Research, architecture decisions and an acceptance-driven roadmap.
 
@@ -40,8 +42,8 @@ Line length and TODO/FIXME use lines and comment tokens; the other rules and the
 metrics come from the parser tree, with no scopes or types yet. A passing
 analysis is not proof of valid GDScript, correct gameplay or absence of
 security vulnerabilities. There is no Godot process execution, lint-tool
-execution, type checking, syntax highlighting, code-duplication engine,
-cognitive complexity, coverage collection or security analysis yet.
+execution, type checking, cognitive complexity, coverage collection or security
+analysis yet.
 
 ## Build and test
 

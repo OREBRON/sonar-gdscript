@@ -43,6 +43,10 @@ Defaults follow SonarSource's rules for other languages.
 | `nesting-depth` | Major | 3 | `if`, `elif`, `else`, `for`, `while` and match branches each add a level; each function, accessor, lambda and class body starts at 0. The outermost `if`, `for` or `while` beyond `max` is reported, not the statements nested in it. A `match` beyond the limit is only reported through statements inside it. |
 | `task-comment` | Info | — | A comment containing an uppercase `TODO` or `FIXME` tag as a whole word, as the Godot editor highlights them; strings, lowercase tags and longer words such as `TODOS` are ignored. Reported on the comment. |
 
+A comment containing `NOSONAR` drops the issues on its line; the plugin passes
+the lines to the scanner, which filters the issues. A file that fails to
+tokenize has no NOSONAR lines, so its line-length issues stay.
+
 The fixtures in `ChecksTest` cover each rule at and just above its limit, and
 the sensor tests cover the issue location and an invalid parameter.
 

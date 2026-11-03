@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.orebron.gdscript.metrics.SizeFixture;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.sensor.highlighting.TypeOfText;
+import org.sonar.api.issue.NoSonarFilter;
 import com.sonarsource.scanner.engine.sensor.test.fixtures.TestInputFileBuilder;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.measures.FileLinesContext;
@@ -26,6 +28,7 @@ class GDScriptSensorTest {
   @TempDir Path directory;
   private final Map<String, Map<Integer, Integer>> nclocData = new HashMap<>();
   private final FileLinesContextFactory fileLines = file -> new RecordingLines(file.key());
+  private final Map<String, Set<Integer>> noSonarLines = new HashMap<>();
 
   private SensorContextTester context(boolean active) {
     var context = SensorContextTester.create(directory);
@@ -47,7 +50,17 @@ class GDScriptSensorTest {
         .setType(type).setCharset(StandardCharsets.UTF_8).setContents(content).build());
   }
 
-  private void execute(SensorContextTester context) { new GDScriptSensor(fileLines).execute(context); }
+  private void execute(SensorContextTester context) {
+    var noSonar = new NoSonarFilter() {
+      @Override public NoSonarFilter noSonarInFile(InputFile file, Set<Integer> lines) {
+        assertTrue(context.allIssues().stream().noneMatch(issue -> issue.primaryLocation().inputComponent().equals(file)),
+            "NOSONAR lines must be known before the file's issues are saved");
+        noSonarLines.put(file.key(), lines);
+        return this;
+      }
+    };
+    new GDScriptSensor(fileLines, noSonar).execute(context);
+  }
 
   private static Integer measure(SensorContextTester context, String file, String metric) {
     var measure = context.<Integer>measure("project:" + file, metric);
@@ -208,6 +221,22 @@ class GDScriptSensorTest {
         .setLanguage("gdscript").setParam("max", max).build());
     context.setActiveRules(rules.build());
     return context;
+  }
+
+  @Test void publishesHighlightingDuplicationTokensAndNoSonarLines() {
+    var context = context("## Doc\n@export var speed := 1.5 # NOSONAR\nvar s = &\"a\" + ^\"a\" + \"a\" + $Node\nvar t = \"\"\"x\ny\"\"\"\n",
+        "gdscript", InputFile.Type.MAIN, true);
+    execute(context);
+    String key = "project:sample.gd";
+    assertEquals(Set.of(2), noSonarLines.get(key));
+    assertEquals(List.of(TypeOfText.STRUCTURED_COMMENT), context.highlightingTypeAt(key, 1, 0));
+    assertEquals(List.of(List.of(TypeOfText.ANNOTATION), List.of(TypeOfText.KEYWORD), List.of(), List.of(TypeOfText.CONSTANT),
+        List.of(TypeOfText.COMMENT)), List.of(0, 8, 12, 21, 25).stream().map(column -> context.highlightingTypeAt(key, 2, column)).toList());
+    assertEquals(List.of(TypeOfText.STRING), context.highlightingTypeAt(key, 3, 28));
+    assertEquals(List.of(TypeOfText.STRING), context.highlightingTypeAt(key, 5, 0));
+    // Literals with the same text keep distinct images per kind; comments are not tokens, so line 1 has none.
+    assertEquals(List.of("2:@exportvarspeed:=0", "3:vars=&\"\"+^\"\"+\"\"+$Node", "4:vart=\"\""),
+        context.cpdTokens(key).stream().map(line -> line.getStartLine() + ":" + line.getValue()).toList());
   }
 
   @Test void publishesNothingWhenCancelled() {
