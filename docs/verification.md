@@ -219,3 +219,42 @@ the same classes at the rules' default limits:
   `sonar.qualitygate.wait=true`; the failing condition was not read.
 - Still not checked: NOSONAR filtering, the failing gate condition, and the
   duplication blocks one by one.
+
+## Third server scan (2026-11-03)
+The plugin of commit 4c5f04c (fourteen rules, `too-many-returns` not in the
+default profile) on the same private project, with third-party `addons/**`
+excluded as well: 343 `.gd` files. The sensor ran in 548 ms and the Compute
+Engine task succeeded. Every measure and every rule's open-issue count equals
+the local recomputation:
+
+| Measure | Server | Local |
+|---|---|---|
+| files | 343 | 343 |
+| ncloc | 41,482 | 41,482 |
+| comment_lines | 2,467 | 2,467 |
+| classes | 365 | 365 |
+| functions | 2,911 | 2,911 |
+| complexity | 11,982 | 11,982 |
+| gdscript_incomplete_files | 0 | 0 |
+| open issues | 3,590 | 3,590 |
+| `gdscript:line-length` | 2,540 | 2,540 |
+| `gdscript:duplicate-string` | 640 | 640 |
+| `gdscript:function-complexity` | 223 | 223 |
+| `gdscript:function-length` | 66 | 66 |
+| `gdscript:nesting-depth` | 55 | 55 |
+| `gdscript:boolean-literal-comparison` | 44 | 44 |
+| `gdscript:naming-convention` | 11 | 11 |
+| `gdscript:empty-block` | 5 | 5 |
+| `gdscript:collapsible-if` | 3 | 3 |
+| `gdscript:too-many-parameters` | 2 | 2 |
+| `gdscript:identical-branches` | 1 | 1 |
+| `gdscript:too-many-returns` (inactive) | 0 | 75 if activated |
+
+- Duplication: 31 `duplicated_blocks`, 1,095 `duplicated_lines`, 2.3 %
+  density, down from 116 blocks with the add-ons included.
+- The quality gate failed on one condition, `new_violations` = 8 (threshold
+  0); `new_duplicated_lines_density` = 1.6 % passed (threshold 3 %). Issues of
+  the newly added rules on unchanged code did not count as new. Which 8 issues
+  are new was not read.
+- About two thirds of the issues are in `tests/`, which the scan treats as main
+  code because `sonar.tests` is not set. NOSONAR filtering is still unchecked.
