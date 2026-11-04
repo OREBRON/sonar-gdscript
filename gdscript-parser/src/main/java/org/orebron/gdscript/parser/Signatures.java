@@ -72,11 +72,12 @@ final class Signatures {
 
   private void typeArguments() throws ParseException {
     TokenStream tokens = grammar.tokens;
-    tokens.next();
+    grammar.enter(tokens.next());
     tokens.openBracket();
     type();
     if (tokens.accept(",")) type();
     tokens.close("]");
+    grammar.leave();
   }
 
   /** What follows a parameter name: {@code : Type}, {@code := default} or {@code : Type = default}; true with a default. */

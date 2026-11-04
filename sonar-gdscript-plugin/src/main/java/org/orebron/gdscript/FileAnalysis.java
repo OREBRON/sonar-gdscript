@@ -2,6 +2,7 @@ package org.orebron.gdscript;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
 import org.orebron.gdscript.checks.ActiveCheck;
 import org.orebron.gdscript.checks.Checks;
@@ -31,8 +32,22 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
 
   boolean complete() { return failure == null; }
 
-  /** Throws CancellationException when {@code cancelled} turns true during lexing or parsing. */
+  /**
+   * Throws CancellationException when {@code cancelled} turns true during lexing or parsing. Any other failure ends
+   * this file as FAILED, so one hostile or unsupported file cannot stop the analysis of the others.
+   */
   static FileAnalysis of(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {
+    try {
+      return analyze(file, checks, cancelled);
+    } catch (CancellationException e) {
+      throw e;
+    } catch (RuntimeException | StackOverflowError e) {
+      // Only the type: the message may carry scanned text.
+      return new FileAnalysis(file, List.of(), null, null, new Failure("Analysis failed: " + e.getClass().getSimpleName(), 0, 0), List.of());
+    }
+  }
+
+  private static FileAnalysis analyze(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {
     String content;
     try {
       content = file.contents();

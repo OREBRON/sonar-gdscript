@@ -69,6 +69,8 @@ public final class GDScriptSensor implements Sensor {
       return context.isCancelled() ? Optional.empty() : Optional.of(analysis);
     } catch (CancellationException e) {
       return Optional.empty();
+    } catch (OutOfMemoryError e) {
+      throw new IllegalStateException("Out of memory while analyzing " + file, e);
     }
   }
 

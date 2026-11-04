@@ -98,6 +98,21 @@ class GDScriptParserTest {
     assertTrue(error.getMessage().startsWith("Nesting deeper than 256"), error.getMessage());
   }
 
+  /** Same-line suites, type arguments and match patterns recurse outside expressions; they share the same limit. */
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "func f(): | 'if 1: ' | pass | ''",
+      "'' | 'class A: ' | pass | ''",
+      "'var x: ' | A[ | int | ]",
+      "'func f(x):\n\tmatch x:\n\t\t' | [ | '' | ]"})
+  void limitsNestingDepthOutsideExpressions(String prefix, String open, String inner, String close) throws Exception {
+    String tail = prefix.startsWith("func f(x)") ? ":\n\t\t\tpass\n" : "\n";
+    parse(prefix + open.repeat(200) + inner + close.repeat(200) + tail);
+    // Far past the limit: before the guard this overflowed the stack instead of failing to parse.
+    var error = assertThrows(ParseException.class, () -> parse(prefix + open.repeat(50_000) + inner + close.repeat(50_000) + tail));
+    assertTrue(error.getMessage().startsWith("Nesting deeper than 256"), error.getMessage());
+  }
+
   @Test void classifiesMatchBranches() throws Exception {
     SyntaxNode script = parse("""
         func f(x):

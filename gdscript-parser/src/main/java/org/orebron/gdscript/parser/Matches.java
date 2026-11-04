@@ -59,8 +59,12 @@ final class Matches {
       return CATCH_ALL | BINDS;
     }
     if (tokens.accept("..")) return REST;
-    if (tokens.at("[")) return arrayPattern();
-    if (tokens.at("{")) return dictionaryPattern();
+    if (tokens.at("[") || tokens.at("{")) {
+      grammar.enter(tokens.peek());
+      int flags = tokens.at("[") ? arrayPattern() : dictionaryPattern();
+      grammar.leave();
+      return flags;
+    }
     return valuePattern() ? CATCH_ALL : 0;
   }
 

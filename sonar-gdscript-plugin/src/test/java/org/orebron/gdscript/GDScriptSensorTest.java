@@ -196,6 +196,34 @@ class GDScriptSensorTest {
     assertEquals(1, measure(context, "bad.gd", INCOMPLETE));
   }
 
+  /** commented-code parses comment text, so a deeply nested comment must not stop the analysis of other files. */
+  @Test void deeplyNestedCommentedCodeDoesNotStopTheAnalysis() {
+    var context = activeRule("commented-code", "0");
+    add(context, "nested.gd", "# var x: " + "A[".repeat(50_000) + "int" + "]".repeat(50_000) + "\nvar a = 1\n", "gdscript", InputFile.Type.MAIN);
+    add(context, "next.gd", "var b = 1\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    assertEquals(1, measure(context, "nested.gd", CoreMetrics.NCLOC_KEY));
+    assertEquals(1, measure(context, "next.gd", CoreMetrics.NCLOC_KEY));
+  }
+
+  /** An unexpected failure ends that file as FAILED, naming only the exception type; the analysis goes on. */
+  @Test void containsUnexpectedFailuresPerFile() {
+    var file = TestInputFileBuilder.create("project", "crash.gd").setLanguage("gdscript").setType(InputFile.Type.MAIN)
+        .setCharset(StandardCharsets.UTF_8).setContents("var a = 1\n").build();
+    var crashing = new org.orebron.gdscript.checks.Check() {
+      @Override public String key() { return "crash"; }
+      @Override public String name() { return "crash"; }
+      @Override public String htmlDescription() { return ""; }
+      @Override public String severity() { return "MINOR"; }
+      @Override public List<org.orebron.gdscript.checks.Violation> check(org.orebron.gdscript.checks.SourceFile source, int limit) {
+        throw new StackOverflowError("scanned text");
+      }
+    };
+    var analysis = FileAnalysis.of(file, List.of(new org.orebron.gdscript.checks.ActiveCheck(crashing, 0)), () -> false);
+    assertFalse(analysis.complete());
+    assertEquals("Analysis failed: StackOverflowError", analysis.failure().message());
+  }
+
   @Test void reportsCodeSmellsOnTheFunctionNameWithTheRuleParameter() {
     var context = activeRule("function-complexity", "1");
     add(context, "sample.gd", "func busy(x):\n\tif x:\n\t\tpass\n", "gdscript", InputFile.Type.MAIN);

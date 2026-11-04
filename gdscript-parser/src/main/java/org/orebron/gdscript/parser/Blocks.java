@@ -57,8 +57,14 @@ final class Blocks {
   /** The body after ':': the rest of the line, or an indented block below it; empty before a closer, as in {@code (func():)}. */
   void body(int parentIndent, Item item) throws ParseException {
     if (closesEnclosingExpression(grammar.tokens.raw())) return;
-    if (grammar.tokens.atEndOfLine()) indented(parentIndent, item);
-    else suite(parentIndent, item);
+    if (grammar.tokens.atEndOfLine()) {
+      indented(parentIndent, item);
+    } else {
+      // Same-line suites nest too, as in "if a: if b: ...", so they count against the depth limit.
+      grammar.enter(grammar.tokens.peek());
+      suite(parentIndent, item);
+      grammar.leave();
+    }
   }
 
   /** A block that must start on the next line, indented deeper than its parent line. */
