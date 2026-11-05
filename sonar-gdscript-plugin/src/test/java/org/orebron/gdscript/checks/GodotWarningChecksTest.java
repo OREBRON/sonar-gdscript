@@ -1,9 +1,11 @@
 package org.orebron.gdscript.checks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.orebron.gdscript.lexer.GDScriptLexer;
 import org.orebron.gdscript.metrics.SizeMetrics;
@@ -167,6 +169,36 @@ class GodotWarningChecksTest {
     var file = parse(source);
     assertTrue(new UnusedSymbolChecks.UnusedParameterCheck().check(file, 0).isEmpty());
     assertEquals(List.of(4, 10), lines(new UnusedSymbolChecks.UnusedVariableCheck().check(file, 0)));
+  }
+
+  @Test void warningIgnoreGrowsWithTheAnnotationNotNamesTimesLines() throws Exception {
+    int count = 3000;
+    var names = IntStream.range(0, count).mapToObj(n -> "\"n" + n + "\"").toList();
+    String source = "@warning_ignore(" + String.join(", ", names) + ")\n" + "# c\n".repeat(count) + "var x = 1\n";
+    var ignores = WarningIgnores.of(GDScriptLexer.lex(source));
+    assertTrue(ignores.ignores("n0", 1) && ignores.ignores("n" + (count - 1), count + 2));
+    assertFalse(ignores.ignores("n0", count + 3));
+    assertEquals(count, ignores.rangeCount());
+  }
+
+  @Test void warningIgnoreJoinsOverlappingRanges() throws Exception {
+    String source = """
+        @warning_ignore("a")
+        func f(x,
+        \t\ty):
+        \tpass
+        @warning_ignore_start("a")
+        @warning_ignore("a")
+        var z = 1
+        @warning_ignore_restore("a")
+        var w = 1
+        @warning_ignore("a")
+        var v = 1
+        var u = 1
+        """;
+    var ignores = WarningIgnores.of(GDScriptLexer.lex(source));
+    assertEquals(List.of(1, 2, 3, 5, 6, 7, 8, 10, 11), IntStream.rangeClosed(1, 12).filter(line -> ignores.ignores("a", line)).boxed().toList());
+    assertEquals(3, ignores.rangeCount());
   }
 
   private static SourceFile parse(String source) throws Exception {

@@ -1,11 +1,11 @@
 package org.orebron.gdscript.checks;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
 
@@ -17,7 +17,8 @@ import org.orebron.gdscript.lexer.TokenKind;
  * the file. A warning is silenced when the line it is reported on is covered.
  */
 final class WarningIgnores {
-  private final Map<String, Set<Integer>> lines = new HashMap<>();
+  /** Per warning, the covered lines as [first, last] ranges: sorted and disjoint once {@link #of} returns. */
+  private final Map<String, List<int[]>> ranges = new HashMap<>();
   private final Map<String, Integer> openRegions = new HashMap<>();
   /** Regions without a restore: ignored from this line to the end of the file. */
   private final Map<String, Integer> ignoredFrom = new HashMap<>();
@@ -40,13 +41,21 @@ final class WarningIgnores {
       }
     }
     ignores.ignoredFrom.putAll(ignores.openRegions);
+    ignores.ranges.values().forEach(WarningIgnores::merge);
     return ignores;
   }
 
   boolean ignores(String warning, int line) {
     Integer from = ignoredFrom.get(warning);
-    return (from != null && from <= line) || lines.getOrDefault(warning, Set.of()).contains(line);
+    if (from != null && from <= line) return true;
+    List<int[]> covered = ranges.getOrDefault(warning, List.of());
+    int found = Collections.binarySearch(covered, new int[] {line}, BY_FIRST);
+    int index = found >= 0 ? found : -found - 2;
+    return index >= 0 && covered.get(index)[1] >= line;
   }
+
+  /** The number of stored ranges, which grows with the annotations, not with the lines they cover. */
+  int rangeCount() { return ranges.values().stream().mapToInt(List::size).sum(); }
 
   private void target(List<Token> tokens, int annotation) {
     List<String> names = names(tokens, annotation);
@@ -87,9 +96,23 @@ final class WarningIgnores {
     };
   }
 
+  private static final Comparator<int[]> BY_FIRST = Comparator.comparingInt(range -> range[0]);
+
   private void cover(String name, int start, int end) {
-    Set<Integer> covered = lines.computeIfAbsent(name, k -> new HashSet<>());
-    for (int line = start; line <= end; line++) covered.add(line);
+    if (start <= end) ranges.computeIfAbsent(name, k -> new ArrayList<>()).add(new int[] {start, end});
+  }
+
+  /** Sorts the ranges and joins overlapping ones, so a lookup is one binary search. */
+  private static void merge(List<int[]> ranges) {
+    ranges.sort(BY_FIRST);
+    var merged = new ArrayList<int[]>();
+    for (int[] range : ranges) {
+      int[] last = merged.isEmpty() ? null : merged.get(merged.size() - 1);
+      if (last != null && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+      else merged.add(range);
+    }
+    ranges.clear();
+    ranges.addAll(merged);
   }
 
   /** The string arguments of the annotation at {@code index}. */
