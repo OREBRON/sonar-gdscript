@@ -16,7 +16,7 @@ import org.orebron.gdscript.parser.GDScriptParser;
 class SymbolsTest {
   /** Redeclaring one name many times, each used once, took seconds when every use scanned every declaration. */
   @Test void manyDeclarationsOfOneNameResolveInLinearTime() throws Exception {
-    int n = 10_000;
+    int n = 20_000;
     var source = new StringBuilder("var x = 1\nfunc f():\n");
     for (int i = 0; i < n; i++) source.append("\tvar x = ").append(i).append("\n\tprint(x)\n");
     for (int i = 0; i < n; i++) source.append("\tif true:\n\t\tvar x = ").append(i).append("\n\t\tprint(x)\n");
@@ -24,8 +24,8 @@ class SymbolsTest {
     List<Check> checks = List.of(new ShadowedVariableCheck(), new UnusedSymbolChecks.UnusedVariableCheck(),
         new UnusedSymbolChecks.UnusedLocalConstantCheck(), new UnusedSymbolChecks.UnusedParameterCheck(),
         new UnusedSymbolChecks.UnusedPrivateClassVariableCheck(), new UnusedSymbolChecks.UnusedSignalCheck());
-    // Seconds before the fix (2 s timed out), well under 0.5 s after; the bound only has to separate the two.
-    int issues = assertTimeoutPreemptively(Duration.ofSeconds(2),
+    // About 10 s before the fix by quadratic scaling, well under 1 s after; the bound only has to separate the two on a loaded runner.
+    int issues = assertTimeoutPreemptively(Duration.ofSeconds(5),
         () -> checks.stream().mapToInt(check -> check.check(file, 0).size()).sum());
     assertEquals(2 * n, issues); // each local shadows the member, and none is unused
     file.symbols().declarations.forEach(d -> assertEquals(d.kind == Kind.LOCAL_VARIABLE ? 1 : 0, d.uses, d.kind + " at line " + d.name.line()));

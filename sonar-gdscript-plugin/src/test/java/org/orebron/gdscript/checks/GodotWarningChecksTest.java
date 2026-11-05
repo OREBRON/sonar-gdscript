@@ -106,28 +106,28 @@ class GodotWarningChecksTest {
     var source = new StringBuilder("func f(x):\n");
     for (int i = 1; i <= depth; i++) {
       String indent = "\t".repeat(i);
-      source.append((indent + "print(x)\n").repeat(20)).append(indent).append("if x:\n");
+      source.append((indent + "print(x)\n").repeat(60)).append(indent).append("if x:\n");
     }
     source.append("\t".repeat(depth + 1)).append("return 1\n");
     for (int i = depth; i >= 1; i--) {
       String indent = "\t".repeat(i);
       source.append(indent).append("else:\n").append(indent).append("\treturn 0\n").append(indent).append("x + 1\n");
     }
-    assertChecksTakeUnderASecond(parse(source.toString()), depth, depth);
+    assertChecksFinishInTime(parse(source.toString()), depth, depth);
   }
 
   /** Each statement looked through all of its block's children: seconds for 30,000 ifs in one function. */
   @Test void manySiblingBlocksAreCheckedInLinearTime() throws Exception {
-    int n = 30_000;
+    int n = 60_000;
     var source = new StringBuilder("func f(x):\n");
     for (int i = 0; i < n; i++) source.append("\tif x:\n\t\tx + 1\n");
     source.append("\treturn 0\n\tx + 1\n");
-    assertChecksTakeUnderASecond(parse(source.toString()), 1, n + 1);
+    assertChecksFinishInTime(parse(source.toString()), 1, n + 1);
   }
 
-  /** Each input took almost 4 s before the fix and 0.2 s cold after; the bound only has to separate the two. */
-  private static void assertChecksTakeUnderASecond(SourceFile file, int unreachable, int standalone) {
-    int[] issues = assertTimeoutPreemptively(Duration.ofSeconds(1), () -> new int[] {
+  /** Each input takes over 10 s on the pre-fix code (4 s at a third or half the size) and well under 1 s after; 5 s separates the two on a loaded runner. */
+  private static void assertChecksFinishInTime(SourceFile file, int unreachable, int standalone) {
+    int[] issues = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> new int[] {
         new UnreachableCodeCheck().check(file, 0).size(), new StandaloneExpressionCheck().check(file, 0).size()});
     assertEquals(unreachable, issues[0]);
     assertEquals(standalone, issues[1]);

@@ -145,7 +145,7 @@ class SecurityChecksTest {
   @Test void longLiteralsStayLinear() throws Exception {
     var shell = parse("func f():\n\tOS.execute(\"" + "x".repeat(200_000) + "\", [])\n");
     var credential = parse("var password = \"" + "<>".repeat(100_000) + "\u0085\"\n");
-    assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
+    assertTimeoutPreemptively(Duration.ofSeconds(5), () -> { // tens of seconds before the fix, milliseconds after
       assertTrue(new SecurityChecks.ShellCommandCheck().check(shell, 0).isEmpty());
       new SecurityChecks.HardcodedCredentialCheck().check(credential, 0);
     });
