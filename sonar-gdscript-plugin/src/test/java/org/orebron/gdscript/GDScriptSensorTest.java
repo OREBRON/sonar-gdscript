@@ -3,11 +3,14 @@ package org.orebron.gdscript;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.orebron.gdscript.metrics.SizeFixture;
@@ -222,6 +225,36 @@ class GDScriptSensorTest {
     var analysis = FileAnalysis.of(file, List.of(new org.orebron.gdscript.checks.ActiveCheck(crashing, 0)), () -> false);
     assertFalse(analysis.complete());
     assertEquals("Analysis failed: StackOverflowError", analysis.failure().message());
+  }
+
+  /** A check that cancels the scan stops the file before the next check; no FileAnalysis exists to publish. */
+  @Test void stopsBetweenChecksWhenCancelled() {
+    // Parsed, unparsable and untokenizable files reach the checks through different paths.
+    for (String content : new String[]{"var a = 1\n", "var a = [1, 2\n", "var s = \"abc\n"}) {
+      var file = TestInputFileBuilder.create("project", "sample.gd").setLanguage("gdscript").setType(InputFile.Type.MAIN)
+          .setCharset(StandardCharsets.UTF_8).setContents(content).build();
+      var cancelled = new AtomicBoolean();
+      var ran = new ArrayList<String>();
+      // An explicit list fixes the order: the cancelling check runs first.
+      var checks = List.of(recording("cancelling", ran, () -> cancelled.set(true)), recording("next", ran, () -> {}));
+      assertThrows(CancellationException.class, () -> FileAnalysis.of(file, checks, cancelled::get), content);
+      assertEquals(List.of("cancelling"), ran, content);
+    }
+  }
+
+  private static org.orebron.gdscript.checks.ActiveCheck recording(String key, List<String> ran, Runnable action) {
+    var check = new org.orebron.gdscript.checks.Check() {
+      @Override public String key() { return key; }
+      @Override public String name() { return key; }
+      @Override public String htmlDescription() { return ""; }
+      @Override public String severity() { return "MINOR"; }
+      @Override public List<org.orebron.gdscript.checks.Violation> check(org.orebron.gdscript.checks.SourceFile source, int limit) {
+        ran.add(key);
+        action.run();
+        return List.of();
+      }
+    };
+    return new org.orebron.gdscript.checks.ActiveCheck(check, 0);
   }
 
   @Test void reportsCodeSmellsOnTheFunctionNameWithTheRuleParameter() {

@@ -1,6 +1,7 @@
 package org.orebron.gdscript;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
@@ -36,8 +37,8 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
   boolean complete() { return failure == null; }
 
   /**
-   * Throws CancellationException when {@code cancelled} turns true during lexing or parsing. Any other failure ends
-   * this file as FAILED, so one hostile or unsupported file cannot stop the analysis of the others.
+   * Throws CancellationException when {@code cancelled} turns true during lexing, parsing or between checks. Any other
+   * failure ends this file as FAILED, so one hostile or unsupported file cannot stop the analysis of the others.
    */
   static FileAnalysis of(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {
     try {
@@ -60,7 +61,7 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
     try {
       return analyzeTokens(file, content, new GDScriptLexer(content, cancelled).tokenize(), checks, cancelled);
     } catch (LexException e) {
-      return new FileAnalysis(file, List.of(), null, null, Failure.of(e), run(checks, new SourceFile(content, List.of(), null, null)));
+      return new FileAnalysis(file, List.of(), null, null, Failure.of(e), run(checks, new SourceFile(content, List.of(), null, null), cancelled));
     }
   }
 
@@ -69,13 +70,19 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
     var size = SizeMetrics.of(tokens);
     try {
       var tree = GDScriptParser.parse(tokens, cancelled);
-      return new FileAnalysis(file, tokens, size, StructureMetrics.of(tree), null, run(checks, new SourceFile(content, tokens, size, tree)));
+      return new FileAnalysis(file, tokens, size, StructureMetrics.of(tree), null, run(checks, new SourceFile(content, tokens, size, tree), cancelled));
     } catch (ParseException e) {
-      return new FileAnalysis(file, tokens, size, null, Failure.of(e), run(checks, new SourceFile(content, tokens, size, null)));
+      return new FileAnalysis(file, tokens, size, null, Failure.of(e), run(checks, new SourceFile(content, tokens, size, null), cancelled));
     }
   }
 
-  private static List<Violation> run(List<ActiveCheck> checks, SourceFile source) {
-    return Checks.withPrecedence(checks.stream().flatMap(check -> check.run(source).stream()).toList());
+  /** Polls {@code cancelled} before each check, so a cancelled scan waits at most for the check that is running. */
+  private static List<Violation> run(List<ActiveCheck> checks, SourceFile source, BooleanSupplier cancelled) {
+    var violations = new ArrayList<Violation>();
+    for (ActiveCheck check : checks) {
+      if (cancelled.getAsBoolean()) throw new CancellationException("GDScript checks were cancelled");
+      violations.addAll(check.run(source));
+    }
+    return Checks.withPrecedence(violations);
   }
 }
