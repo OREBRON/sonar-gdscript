@@ -1,8 +1,10 @@
 package org.orebron.gdscript.checks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.orebron.gdscript.lexer.GDScriptLexer;
@@ -120,6 +122,15 @@ class SecurityChecksTest {
   @Test void aDeclaredNameHidesTheEngineClass() throws Exception {
     assertTrue(new SecurityChecks.ProcessExecutionCheck().check(parse("var OS = preload(\"res://fake_os.gd\")\nfunc f():\n\tOS.execute(\"ls\", [])\n"), 0).isEmpty());
     assertEquals(RuleType.VULNERABILITY, new SecurityChecks.WeakHashCheck().type());
+  }
+
+  @Test void longLiteralsStayLinear() throws Exception {
+    var shell = parse("func f():\n\tOS.execute(\"" + "x".repeat(200_000) + "\", [])\n");
+    var credential = parse("var password = \"" + "<>".repeat(100_000) + "\u0085\"\n");
+    assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
+      assertTrue(new SecurityChecks.ShellCommandCheck().check(shell, 0).isEmpty());
+      new SecurityChecks.HardcodedCredentialCheck().check(credential, 0);
+    });
   }
 
   private static SourceFile parse(String source) throws Exception {

@@ -90,7 +90,10 @@ final class SecurityChecks {
         String program = Calls.stringValue(call.argument(0));
         List<List<Token>> arguments = Calls.arrayElements(call.argument(1));
         if (program == null || arguments == null) continue;
-        String name = program.replace('\\', '/').replaceFirst(".*/", "").toLowerCase(Locale.ROOT).replaceFirst("\\.exe$", "");
+        // lastIndexOf, not replaceFirst(".*/"): that regex retries from every position, quadratic on a long literal
+        String path = program.replace('\\', '/');
+        String name = path.substring(path.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
+        if (name.endsWith(".exe")) name = name.substring(0, name.length() - 4);
         Set<String> flags = COMMAND_FLAGS.get(name);
         if (flags == null) continue;
         for (int i = 0; i + 1 < arguments.size(); i++) {
@@ -251,8 +254,9 @@ final class SecurityChecks {
     private static final Set<String> NOT_SECRETS = Set.of("id", "url", "uri", "path", "file", "name", "label", "hint",
         "text", "message", "field", "length", "count", "type", "header", "prompt", "error", "format", "regex", "setting",
         "settings", "property", "option", "env");
+    /** Used with {@code find()}: a {@code .*X.*} pattern backtracks quadratically when the value holds a U+0085. */
     private static final Pattern PLACEHOLDER = Pattern.compile(
-        "(?i).*(your|example|placeholder|changeme|change_me|dummy|sample|todo|xxx|\\*\\*\\*|<|>|\\{|\\}|\\$|%).*");
+        "(?i)your|example|placeholder|changeme|change_me|dummy|sample|todo|xxx|\\*\\*\\*|<|>|\\{|\\}|\\$|%");
 
     @Override public String key() { return "hardcoded-credential"; }
     @Override public String name() { return "Credentials should not be hard-coded"; }
@@ -319,7 +323,7 @@ final class SecurityChecks {
       if (value.matches("[a-z_.]+|[A-Z_.]+") || value.contains("://") || value.startsWith("/")) return false;
       if (value.matches("[A-Za-z0-9_.]+(/[A-Za-z0-9_.]+)+")) return false; // a settings or resource path such as "app/client_token"
       if (value.chars().distinct().count() <= 2) return false;
-      return !PLACEHOLDER.matcher(value).matches();
+      return !PLACEHOLDER.matcher(value).find();
     }
   }
 
