@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.orebron.gdscript.lexer.GDScriptLexer;
 import org.orebron.gdscript.metrics.SizeMetrics;
 import org.orebron.gdscript.parser.GDScriptParser;
+import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.RuleType;
 
 /** The security plan's L1 review rules, each with matching code, safe code and a near miss. */
@@ -150,6 +151,27 @@ class SecurityChecksTest {
     });
   }
 
+  @Test void precedenceDropsOnlyTheLessSpecificFindingAtTheSamePosition() {
+    var sameLine = finding("process-execution", 2, 4);
+    var shell = finding("shell-command", 2, 1);
+    var other = finding("standalone-expression", 3, 1);
+    var kept = finding("process-execution", 3, 1);
+    assertEquals(List.of(sameLine, shell, other, kept),
+        Checks.withPrecedence(List.of(finding("process-execution", 2, 1), sameLine, shell, other, kept)));
+  }
+
+  @Test void precedenceStaysLinearInTheNumberOfFindings() {
+    var findings = new ArrayList<Violation>();
+    for (int line = 1; line <= 100_000; line++) {
+      findings.add(finding("process-execution", line, 1));
+      findings.add(finding("standalone-expression", line, 1));
+    }
+    findings.add(finding("shell-command", 1, 1));
+    // The former scan of every finding per process-execution one took about 30 s here.
+    var kept = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> Checks.withPrecedence(findings));
+    assertEquals(findings.size() - 1, kept.size());
+  }
+
   @Test void longPathsDoNotOverflowTheStack() throws Exception {
     var path = parse("var token = \"" + "a/".repeat(50_000) + "b\"\n");
     assertTrue(new SecurityChecks.HardcodedCredentialCheck().check(path, 0).isEmpty());
@@ -158,6 +180,10 @@ class SecurityChecksTest {
   private static SourceFile parse(String source) throws Exception {
     var tokens = GDScriptLexer.lex(source);
     return new SourceFile(source, tokens, SizeMetrics.of(tokens), GDScriptParser.parse(tokens));
+  }
+
+  private static Violation finding(String rule, int line, int column) {
+    return new Violation(RuleKey.of("gdscript", rule), line, column, column + 1, "");
   }
 
   private static List<Integer> lines(List<Violation> violations) { return violations.stream().map(Violation::line).toList(); }
