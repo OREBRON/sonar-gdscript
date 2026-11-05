@@ -41,7 +41,7 @@ public final class DuplicateStringCheck implements Check {
       Token first = entry.getValue().get(0);
       // Never the literal itself: it may be a secret, and messages reach people who cannot read the source.
       String message = "Define a constant instead of duplicating this literal " + count + " times.";
-      violations.add(first.line() == first.endLine() ? Violation.at(this, first, message) : Violation.onLine(this, first.line(), message));
+      violations.add(Violation.at(this, first, message));
     }
     return violations;
   }

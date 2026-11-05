@@ -9,8 +9,10 @@ public record Violation(RuleKey rule, int line, int column, int endColumn, Strin
     return new Violation(check.ruleKey(), line, -1, -1, message);
   }
 
-  /** On a single-line token such as a name, keyword or comment. */
+  /** On the token; on its whole first line when it spans lines, as a string or node path may (issue #12). */
   static Violation at(Check check, Token token, String message) {
+    // endColumn belongs to endLine: paired with the start line it can make an empty, reversed or past-line-end range.
+    if (token.endLine() != token.line()) return onLine(check, token.line(), message);
     return new Violation(check.ruleKey(), token.line(), token.column(), token.endColumn(), message);
   }
 }

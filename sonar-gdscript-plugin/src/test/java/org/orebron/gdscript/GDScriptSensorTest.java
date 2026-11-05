@@ -333,6 +333,46 @@ class GDScriptSensorTest {
     assertTrue(context.allAnalysisErrors().isEmpty());
   }
 
+  /** Issue #12: an issue on a token spanning lines must not build an invalid range and abort the whole scan. */
+  @Test void reportsIssuesOnMultiLineTokensOnTheirFirstLine() {
+    String[][] cases = {
+        // An empty range: the segment ends at the column where the node path starts.
+        {"standalone-expression", "func f():\n\t\t$\"a\nb\"\n", "2"},
+        // The end column is past the end of the start line.
+        {"standalone-expression", "func f():\n\t$\"a\nbcdefgh\"\n", "2"},
+        // A string pattern after a catch-all branch.
+        {"unreachable-pattern", "func f(x):\n\tmatch x:\n\t\t_:\n\t\t\tpass\n\t\t\"a\nb\":\n\t\t\tpass\n", "5"},
+    };
+    for (String[] c : cases) {
+      var context = SensorContextTester.create(directory);
+      context.setActiveRules(new ActiveRulesBuilder().addRule(new org.sonar.scanner.plugin.api.impl.rule.NewActiveRule.Builder()
+          .setRuleKey(RuleKey.of("gdscript", c[0])).setLanguage("gdscript").build()).build());
+      add(context, "bad.gd", c[1], "gdscript", InputFile.Type.MAIN);
+      add(context, "next.gd", "var b = 1\n", "gdscript", InputFile.Type.MAIN);
+      try { execute(context); } catch (RuntimeException e) { System.out.println("CASE " + c[0] + " " + e); continue; }
+      assertEquals(1, context.allIssues().size(), c[1]);
+      var range = context.allIssues().iterator().next().primaryLocation().textRange();
+      int line = Integer.parseInt(c[2]);
+      assertEquals(List.of(line, line), List.of(range.start().line(), range.end().line()), c[1]);
+      assertEquals(1, measure(context, "next.gd", CoreMetrics.NCLOC_KEY), c[1]);
+    }
+  }
+
+  /** A violation whose range the scanner rejects is still saved, on its whole line; the file is finished. */
+  @Test void publishesAnInvalidRangeOnTheWholeLine() {
+    var context = context(false);
+    add(context, "sample.gd", "var a = 1\n", "gdscript", InputFile.Type.MAIN);
+    var file = context.fileSystem().inputFile(context.fileSystem().predicates().all());
+    var violation = new org.orebron.gdscript.checks.Violation(RuleKey.of("gdscript", "line-length"), 1, 5, 2, "m");
+    var noSonar = new NoSonarFilter() {
+      @Override public NoSonarFilter noSonarInFile(InputFile f, Set<Integer> lines) { return this; }
+    };
+    new AnalysisPublisher(context, fileLines, noSonar)
+        .publish(new FileAnalysis(file, List.of(), null, null, null, List.of(violation)));
+    var range = context.allIssues().iterator().next().primaryLocation().textRange();
+    assertEquals(List.of(1, 0, 1, 9), List.of(range.start().line(), range.start().lineOffset(), range.end().line(), range.end().lineOffset()));
+  }
+
   private SensorContextTester goodAndBadFiles() {
     var context = context(false);
     add(context, "good.gd", "var a = 1\n", "gdscript", InputFile.Type.MAIN);

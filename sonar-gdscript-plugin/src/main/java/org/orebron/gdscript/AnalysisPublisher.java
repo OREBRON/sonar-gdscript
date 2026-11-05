@@ -10,6 +10,7 @@ import org.orebron.gdscript.lexer.TokenKind;
 import org.orebron.gdscript.metrics.SizeMetrics;
 import org.orebron.gdscript.metrics.StructureMetrics;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.TextRange;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.cpd.NewCpdTokens;
 import org.sonar.api.batch.sensor.error.NewAnalysisError;
@@ -119,9 +120,19 @@ final class AnalysisPublisher {
 
   private void publishIssue(InputFile file, Violation violation) {
     var issue = context.newIssue().forRule(violation.rule());
-    var range = violation.column() < 0 ? file.selectLine(violation.line())
-        : file.newRange(violation.line(), violation.column(), violation.line(), violation.endColumn());
-    issue.at(issue.newLocation().on(file).at(range).message(violation.message())).save();
+    issue.at(issue.newLocation().on(file).at(range(file, violation)).message(violation.message())).save();
+  }
+
+  /** The whole line when the scanner rejects the columns: the file's other results are already saved (issue #12). */
+  private static TextRange range(InputFile file, Violation violation) {
+    if (violation.column() >= 0) {
+      try {
+        return file.newRange(violation.line(), violation.column(), violation.line(), violation.endColumn());
+      } catch (IllegalArgumentException e) {
+        // An empty, reversed or past-line-end range from a check bug; falls through to the line.
+      }
+    }
+    return file.selectLine(violation.line());
   }
 
   private void save(InputFile file, Metric<Integer> metric, int value) {

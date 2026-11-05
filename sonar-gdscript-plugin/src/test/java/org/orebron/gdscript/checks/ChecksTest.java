@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.orebron.gdscript.lexer.GDScriptLexer;
+import org.orebron.gdscript.lexer.Token;
+import org.orebron.gdscript.lexer.TokenKind;
 import org.orebron.gdscript.metrics.SizeMetrics;
 import org.orebron.gdscript.parser.GDScriptParser;
 
@@ -240,6 +242,15 @@ class ChecksTest {
     }
     assertEquals(3, Limit.parse("nesting-depth.max", null, 3));
     assertEquals(5, Limit.parse("nesting-depth.max", " 5 ", 3));
+  }
+
+  /** The column range of a token spanning lines would pair its start line with another line's column (issue #12). */
+  @Test void violationOnAMultiLineTokenCoversItsFirstLine() {
+    var check = new StandaloneExpressionCheck();
+    var multiLine = new Token(TokenKind.STRING, "\"a\nb\"", 0, 2, 2, 3, 2, 0, 0);
+    assertEquals(Violation.onLine(check, 2, "m"), Violation.at(check, multiLine, "m"));
+    var singleLine = new Token(TokenKind.STRING, "\"ab\"", 0, 2, 2, 2, 6, 0, 0);
+    assertEquals(new Violation(check.ruleKey(), 2, 2, 6, "m"), Violation.at(check, singleLine, "m"));
   }
 
   private static SourceFile parse(String source) throws Exception {
