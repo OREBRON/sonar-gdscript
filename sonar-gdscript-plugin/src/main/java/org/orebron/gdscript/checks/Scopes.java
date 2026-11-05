@@ -27,6 +27,7 @@ final class Scopes {
   final SyntaxNode root;
   private final SyntaxNode[] innermost;
   private final Map<SyntaxNode, SyntaxNode> parents = new IdentityHashMap<>();
+  private final Map<SyntaxNode, List<Integer>> statements = new IdentityHashMap<>();
 
   /** Needs a parsed file. */
   Scopes(SourceFile file) {
@@ -107,11 +108,16 @@ final class Scopes {
   /**
    * The indexes of the statements that start directly in a block's body: lines at the body's indentation outside
    * brackets, and statements after ';'. Annotations are skipped, and elif and else continue the if before them.
+   * Found once per block, since a block's scan covers its nested blocks and checks ask for every block.
    */
   List<Integer> statements(SyntaxNode block) {
+    return statements.computeIfAbsent(block, this::findStatements);
+  }
+
+  private List<Integer> findStatements(SyntaxNode block) {
     var starts = new ArrayList<Integer>();
     List<Token> body = TokenRanges.significant(TokenRanges.body(tokens, block));
-    if (body.isEmpty()) return starts;
+    if (body.isEmpty()) return List.of();
     int first = indexOf(body.get(0));
     int end = indexOf(block.last());
     boolean inline = !startsLine(first);
@@ -143,7 +149,7 @@ final class Scopes {
         default -> { }
       }
     }
-    return starts;
+    return List.copyOf(starts);
   }
 
   /** The index of the first significant token after the annotations and their arguments at {@code index}. */

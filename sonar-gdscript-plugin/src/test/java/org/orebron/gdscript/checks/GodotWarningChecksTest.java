@@ -2,8 +2,10 @@ package org.orebron.gdscript.checks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -96,6 +98,39 @@ class GodotWarningChecksTest {
         \t\tprint("accessors are left out")
         """;
     assertEquals(List.of(4, 15), lines(new UnreachableCodeCheck().check(parse(source), 0)));
+  }
+
+  /** Every enclosing block asked again whether a nested block returns, and rescanned it: seconds at 250 levels. */
+  @Test void deeplyNestedBlocksAreCheckedInNearLinearTime() throws Exception {
+    int depth = 250; // the parser stops at 256 levels of nesting
+    var source = new StringBuilder("func f(x):\n");
+    for (int i = 1; i <= depth; i++) {
+      String indent = "\t".repeat(i);
+      source.append((indent + "print(x)\n").repeat(20)).append(indent).append("if x:\n");
+    }
+    source.append("\t".repeat(depth + 1)).append("return 1\n");
+    for (int i = depth; i >= 1; i--) {
+      String indent = "\t".repeat(i);
+      source.append(indent).append("else:\n").append(indent).append("\treturn 0\n").append(indent).append("x + 1\n");
+    }
+    assertChecksTakeUnderASecond(parse(source.toString()), depth, depth);
+  }
+
+  /** Each statement looked through all of its block's children: seconds for 30,000 ifs in one function. */
+  @Test void manySiblingBlocksAreCheckedInLinearTime() throws Exception {
+    int n = 30_000;
+    var source = new StringBuilder("func f(x):\n");
+    for (int i = 0; i < n; i++) source.append("\tif x:\n\t\tx + 1\n");
+    source.append("\treturn 0\n\tx + 1\n");
+    assertChecksTakeUnderASecond(parse(source.toString()), 1, n + 1);
+  }
+
+  /** Each input took almost 4 s before the fix and 0.2 s cold after; the bound only has to separate the two. */
+  private static void assertChecksTakeUnderASecond(SourceFile file, int unreachable, int standalone) {
+    int[] issues = assertTimeoutPreemptively(Duration.ofSeconds(1), () -> new int[] {
+        new UnreachableCodeCheck().check(file, 0).size(), new StandaloneExpressionCheck().check(file, 0).size()});
+    assertEquals(unreachable, issues[0]);
+    assertEquals(standalone, issues[1]);
   }
 
   @Test void unreachablePatternFollowsACatchAll() throws Exception {

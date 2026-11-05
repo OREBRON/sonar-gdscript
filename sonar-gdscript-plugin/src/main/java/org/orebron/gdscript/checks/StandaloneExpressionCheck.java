@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.orebron.gdscript.lexer.Keywords;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
@@ -41,10 +42,12 @@ public final class StandaloneExpressionCheck extends GodotWarningCheck {
     var scopes = file.scopes();
     file.tree().descendantsAndSelf().filter(block -> STATEMENT_BLOCKS.contains(block.kind())).forEach(block -> {
       List<Integer> starts = scopes.statements(block);
+      // Collected once per block: a block may have thousands of statements and children.
+      Set<Token> children = block.children().stream().map(SyntaxNode::token).collect(Collectors.toSet());
       for (int s = 0; s < starts.size(); s++) {
         int start = starts.get(s);
         int end = Math.min(scopes.statementEnd(start), s + 1 < starts.size() ? starts.get(s + 1) : scopes.indexOf(block.last()) + 1);
-        String message = classify(scopes, block, start, end);
+        String message = classify(scopes, children, start, end);
         if (message != null) violations.add(Violation.at(this, scopes.tokens.get(start), message));
       }
     });
@@ -52,10 +55,10 @@ public final class StandaloneExpressionCheck extends GodotWarningCheck {
   }
 
   /** Null when the statement is not a standalone expression. */
-  private static String classify(Scopes scopes, SyntaxNode block, int start, int end) {
+  private static String classify(Scopes scopes, Set<Token> children, int start, int end) {
     Token first = scopes.tokens.get(start);
     // match is not reserved, so the tree tells a match statement from an expression named match.
-    if (block.children().stream().anyMatch(child -> child.token().equals(first))) return null;
+    if (children.contains(first)) return null;
     if (first.kind() == TokenKind.IDENTIFIER && Keywords.isReserved(first.text()) && !Keywords.isOperand(first.text())
         && !first.text().equals("not")) {
       return null; // a statement keyword, await, preload, or a lambda (an error of its own)
