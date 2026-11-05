@@ -198,7 +198,7 @@ final class TokenScanner {
 
   private TokenKind operator() throws LexException {
     String operator = Syntax.operatorAt(cursor);
-    if (operator == null) throw cursor.error("Unexpected character '" + Character.toString(cursor.codePoint()) + "'");
+    if (operator == null) throw cursor.error("Unexpected character '" + SourceException.printable(Character.toString(cursor.codePoint()), 10) + "'");
     cursor.advance(operator.length());
     return TokenKind.OPERATOR;
   }

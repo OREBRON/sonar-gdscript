@@ -1,6 +1,7 @@
 package org.orebron.gdscript.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -90,6 +91,20 @@ class GDScriptParserTest {
       var error = assertThrows(ParseException.class, () -> parse(source));
       assertTrue(error.getMessage().matches("(Expected end of line|Unexpected operator).*"), error.getMessage());
     }
+  }
+
+  /** Parse errors reach scanner logs: literal content stays out, other token text is escaped and capped. */
+  @Test void keepsErrorMessagesPrintableAndWithoutLiterals() {
+    for (String literal : new String[]{"\"\"\"top\u001bsecret\r\nforged\"\"\"", "$\"top\u001bsecret\nforged\""}) {
+      var error = assertThrows(ParseException.class, () -> parse("var a = 1 " + literal + "\n"));
+      assertTrue(error.getMessage().matches(".* near a (string literal|node path) at line 1, column 11"), error.getMessage());
+      assertTrue(error.getMessage().chars().noneMatch(c -> c < 0x20 || c == 0x7F), error.getMessage());
+      assertFalse(error.getMessage().contains("secret"), error.getMessage());
+    }
+    String message = assertThrows(ParseException.class, () -> parse("var a = 1 " + "x".repeat(500) + "\n")).getMessage();
+    String near = message.substring(message.indexOf("near '") + 6, message.lastIndexOf("' at line"));
+    assertTrue(near.codePointCount(0, near.length()) <= 80 && near.endsWith("\u2026"), message);
+    assertTrue(assertThrows(ParseException.class, () -> parse("var a = 1 b\n")).getMessage().contains(" near 'b' at line 1"));
   }
 
   @Test void limitsNestingDepth() throws Exception {

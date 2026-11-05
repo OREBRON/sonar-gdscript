@@ -27,6 +27,9 @@ import org.sonar.api.batch.fs.InputFile;
 record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, StructureMetrics structure, Failure failure, List<Violation> violations) {
   /** Why a file could not be analyzed completely; line 0 means there is no location. */
   record Failure(String message, int line, int column) {
+    // Every logged or published failure passes here; IOException messages are not sanitized upstream.
+    Failure { message = SourceException.printable(message, 1000); }
+
     static Failure of(SourceException e) { return new Failure(e.getMessage(), e.line(), e.column()); }
   }
 

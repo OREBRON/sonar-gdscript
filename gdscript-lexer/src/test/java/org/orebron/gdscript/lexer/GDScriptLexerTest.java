@@ -162,6 +162,11 @@ class GDScriptLexerTest {
   @Test void rejectsCharactersOutsideTheLanguage() {
     var error = assertThrows(LexException.class, () -> GDScriptLexer.lex("a ? b"));
     assertTrue(error.getMessage().startsWith("Unexpected character '?'"));
+    // The message reaches scanner logs, so invisible and line-breaking characters are named instead.
+    for (int control : new int[]{0x1B, 0x7F, 0x85, 0x2028}) {
+      var named = assertThrows(LexException.class, () -> GDScriptLexer.lex("a " + Character.toString(control) + " b"));
+      assertTrue(named.getMessage().startsWith(String.format("Unexpected character 'U+%04X'", control)), named.getMessage());
+    }
   }
 
   @Test void stopsWhenCancelled() throws LexException {

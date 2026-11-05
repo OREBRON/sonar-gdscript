@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
 import org.orebron.gdscript.lexer.Keywords;
+import org.orebron.gdscript.lexer.SourceException;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
 
 /** Significant tokens with lookahead. Inside brackets newlines are skipped unless a block body re-enables them. */
 final class TokenStream {
   private static final int CANCEL_CHECK_INTERVAL = 10_000;
+  private static final int NEAR_LIMIT = 80;
   private final List<Token> tokens;
   private final BooleanSupplier cancelled;
   private final Deque<Boolean> skipNewlines = new ArrayDeque<>();
@@ -95,8 +97,17 @@ final class TokenStream {
   }
 
   static ParseException error(Token token, String message) {
-    String near = token.kind() == TokenKind.EOF ? " at end of file" : " near '" + token.text().strip() + "'";
-    return new ParseException(message + near, token.line(), token.column());
+    return new ParseException(message + near(token), token.line(), token.column());
+  }
+
+  /** Messages reach scanner logs: literals may hold secrets, so only their kind is named; other text is escaped and capped. */
+  private static String near(Token token) {
+    return switch (token.kind()) {
+      case EOF -> " at end of file";
+      case STRING -> " near a string literal";
+      case NODE_PATH -> " near a node path";
+      default -> " near '" + SourceException.printable(token.text().strip(), NEAR_LIMIT) + "'";
+    };
   }
 
   private void advance() {
