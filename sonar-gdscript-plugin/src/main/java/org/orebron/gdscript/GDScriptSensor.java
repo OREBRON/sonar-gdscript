@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.orebron.gdscript.checks.ActiveCheck;
 import org.orebron.gdscript.checks.Check;
 import org.orebron.gdscript.checks.Checks;
+import org.orebron.gdscript.lexer.SourceException;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.sensor.Sensor;
@@ -48,7 +49,7 @@ public final class GDScriptSensor implements Sensor {
       publisher.publish(analysis.get());
       if (!analysis.get().complete()) incomplete.add(analysis.get());
     }
-    report(incomplete, context.config().getBoolean(FAIL_ON_INCOMPLETE).orElse(false));
+    report(incomplete, context.config().getBoolean(FAIL_ON_INCOMPLETE).orElse(false), LOG);
   }
 
   /** Checks whose rule is active, with their limits; settings are validated only for active rules. */
@@ -70,7 +71,7 @@ public final class GDScriptSensor implements Sensor {
     } catch (CancellationException e) {
       return Optional.empty();
     } catch (OutOfMemoryError e) {
-      throw new IllegalStateException("Out of memory while analyzing " + file, e);
+      throw new IllegalStateException("Out of memory while analyzing " + printable(file), e);
     }
   }
 
@@ -80,13 +81,17 @@ public final class GDScriptSensor implements Sensor {
         predicates.and(predicates.hasLanguage(GDScriptLanguage.KEY), predicates.hasType(InputFile.Type.MAIN)));
   }
 
-  private static void report(List<FileAnalysis> incomplete, boolean failOnIncomplete) {
+  /** Takes the logger so tests can see what is logged; execute passes LOG. */
+  static void report(List<FileAnalysis> incomplete, boolean failOnIncomplete, Logger log) {
     incomplete.stream().limit(REPORTED_FILES)
-        .forEach(analysis -> LOG.warn("Incomplete GDScript analysis of {}: {}", analysis.file(), analysis.failure().message()));
-    if (incomplete.size() > REPORTED_FILES) LOG.warn("{} more GDScript files were analyzed incompletely", incomplete.size() - REPORTED_FILES);
+        .forEach(analysis -> log.warn("Incomplete GDScript analysis of {}: {}", printable(analysis.file()), analysis.failure().message()));
+    if (incomplete.size() > REPORTED_FILES) log.warn("{} more GDScript files were analyzed incompletely", incomplete.size() - REPORTED_FILES);
     if (failOnIncomplete && !incomplete.isEmpty()) {
       throw new IllegalStateException(incomplete.size() + " GDScript files were analyzed incompletely and " + FAIL_ON_INCOMPLETE
-          + " is true: " + incomplete.stream().limit(REPORTED_FILES).map(analysis -> analysis.file().toString()).collect(Collectors.joining(", ")));
+          + " is true: " + incomplete.stream().limit(REPORTED_FILES).map(analysis -> printable(analysis.file())).collect(Collectors.joining(", ")));
     }
   }
+
+  /** File names may contain line breaks or control characters that would forge scanner log lines (CWE-117). */
+  private static String printable(InputFile file) { return SourceException.printable(file.toString(), 1000); }
 }

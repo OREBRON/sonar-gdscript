@@ -199,6 +199,31 @@ class GDScriptSensorTest {
     assertEquals(1, measure(context, "bad.gd", INCOMPLETE));
   }
 
+  /** A hostile file name must not forge scanner log lines (CWE-117), neither in the warning nor in the strict-mode failure. */
+  @Test void escapesControlCharactersInReportedFileNames() {
+    var file = TestInputFileBuilder.create("project", "bad\n\u001B[31mFORGED.gd").setLanguage("gdscript").setType(InputFile.Type.MAIN)
+        .setCharset(StandardCharsets.UTF_8).setContents("var s = \"abc\n").build();
+    var context = context(false);
+    context.fileSystem().add(file);
+    context.settings().setProperty(GDScriptSensor.FAIL_ON_INCOMPLETE, "true");
+    var failure = assertThrows(IllegalStateException.class, () -> execute(context));
+    // slf4j-nop discards logs, so a proxy Logger records the formatted warnings.
+    var warnings = new ArrayList<String>();
+    var log = (org.slf4j.Logger) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{org.slf4j.Logger.class},
+        (proxy, method, args) -> {
+          if (method.getName().equals("warn")) {
+            warnings.add(org.slf4j.helpers.MessageFormatter.arrayFormat((String) args[0], java.util.Arrays.copyOfRange(args, 1, args.length)).getMessage());
+          }
+          return null;
+        });
+    GDScriptSensor.report(List.of(FileAnalysis.of(file, List.of(), () -> false)), false, log);
+    assertEquals(1, warnings.size());
+    for (String text : List.of(warnings.get(0), failure.getMessage())) {
+      assertTrue(text.contains("bad\\nU+001B[31mFORGED.gd"), text);
+      assertTrue(text.chars().noneMatch(c -> c < 0x20 || c == 0x7F), text);
+    }
+  }
+
   /** commented-code parses comment text, so a deeply nested comment must not stop the analysis of other files. */
   @Test void deeplyNestedCommentedCodeDoesNotStopTheAnalysis() {
     var context = activeRule("commented-code", "0");
