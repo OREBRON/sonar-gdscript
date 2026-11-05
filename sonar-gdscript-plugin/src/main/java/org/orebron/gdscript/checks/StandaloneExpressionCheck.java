@@ -38,7 +38,7 @@ public final class StandaloneExpressionCheck extends GodotWarningCheck {
   @Override List<Violation> find(SourceFile file) {
     var violations = new ArrayList<Violation>();
     if (file.tree() == null) return violations;
-    var scopes = new Scopes(file);
+    var scopes = file.scopes();
     file.tree().descendantsAndSelf().filter(block -> STATEMENT_BLOCKS.contains(block.kind())).forEach(block -> {
       List<Integer> starts = scopes.statements(block);
       for (int s = 0; s < starts.size(); s++) {

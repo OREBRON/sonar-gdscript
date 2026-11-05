@@ -26,7 +26,7 @@ final class SecurityChecks {
     abstract List<Violation> find(Calls calls, SourceFile file);
 
     @Override public final List<Violation> check(SourceFile file, int unused) {
-      Calls calls = Calls.of(file);
+      Calls calls = file.calls();
       return calls == null ? List.of() : find(calls, file);
     }
 

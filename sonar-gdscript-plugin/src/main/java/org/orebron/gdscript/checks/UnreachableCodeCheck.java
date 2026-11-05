@@ -30,7 +30,7 @@ public final class UnreachableCodeCheck extends GodotWarningCheck {
 
   @Override List<Violation> find(SourceFile file) {
     if (file.tree() == null) return List.of();
-    var scopes = new Scopes(file);
+    var scopes = file.scopes();
     var violations = new ArrayList<Violation>();
     file.tree().descendantsAndSelf().filter(block -> STATEMENT_BLOCKS.contains(block.kind()))
         .filter(block -> {

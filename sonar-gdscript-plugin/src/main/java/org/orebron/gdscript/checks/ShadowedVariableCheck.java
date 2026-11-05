@@ -25,15 +25,15 @@ public final class ShadowedVariableCheck extends GodotWarningCheck {
   }
 
   @Override List<Violation> find(SourceFile file) {
-    Symbols symbols = Symbols.of(file);
+    Symbols symbols = file.symbols();
     var violations = new ArrayList<Violation>();
     if (symbols == null) return violations;
     for (Declaration local : symbols.declarations) {
       if (!LOCAL_KINDS.containsKey(local.kind)) continue;
-      symbols.membersOf(symbols.scopes.classOf(local.scope)).stream()
-          .filter(member -> member.text().equals(local.text()) && MEMBER_KINDS.containsKey(member.kind)).findFirst()
-          .ifPresent(member -> violations.add(Violation.at(this, local.name, "The local " + LOCAL_KINDS.get(local.kind) + " \""
-              + local.text() + "\" shadows the " + MEMBER_KINDS.get(member.kind) + " declared at line " + member.name.line() + "; rename it.")));
+      Declaration member = symbols.member(symbols.scopes.classOf(local.scope), local.text());
+      if (member == null || !MEMBER_KINDS.containsKey(member.kind)) continue; // every non-local kind is listed
+      violations.add(Violation.at(this, local.name, "The local " + LOCAL_KINDS.get(local.kind) + " \""
+          + local.text() + "\" shadows the " + MEMBER_KINDS.get(member.kind) + " declared at line " + member.name.line() + "; rename it."));
     }
     return violations;
   }

@@ -25,7 +25,7 @@ final class UnusedSymbolChecks {
     abstract String message(Declaration declaration, Symbols symbols);
 
     @Override List<Violation> find(SourceFile file) {
-      Symbols symbols = Symbols.of(file);
+      Symbols symbols = file.symbols();
       if (symbols == null) return List.of();
       Predicate<Declaration> unused = declaration -> declaration.uses == 0 && kinds().contains(declaration.kind) && reports(declaration);
       return symbols.declarations.stream().filter(unused)

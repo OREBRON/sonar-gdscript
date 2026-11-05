@@ -22,7 +22,7 @@ final class OnreadyChecks {
     }
 
     @Override List<Violation> find(SourceFile file) {
-      Symbols symbols = Symbols.of(file);
+      Symbols symbols = file.symbols();
       if (symbols == null) return List.of();
       return MemberVariables.of(symbols).stream().filter(v -> !v.isStatic() && !v.hasAnnotation("@onready"))
           .filter(v -> syntax(v.initializer()) != null)
@@ -73,7 +73,7 @@ final class OnreadyChecks {
     }
 
     @Override List<Violation> find(SourceFile file) {
-      Symbols symbols = Symbols.of(file);
+      Symbols symbols = file.symbols();
       if (symbols == null) return List.of();
       return MemberVariables.of(symbols).stream().filter(v -> v.hasAnnotation("@onready") && v.hasAnnotation("@export"))
           .map(v -> Violation.at(this, v.declaration().name, "Remove \"@onready\" or \"@export\": \"@onready\" overwrites the exported value."))

@@ -2,13 +2,17 @@ package org.orebron.gdscript.checks;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.orebron.gdscript.lexer.Keywords;
 import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.lexer.TokenKind;
@@ -61,21 +65,29 @@ final class Symbols {
   final List<Declaration> declarations = new ArrayList<>();
   private final Map<String, List<Declaration>> byName = new HashMap<>();
   private final Set<Integer> declarationOffsets = new HashSet<>();
+  /** Per class and name, its members in declaration order. */
+  private final Map<SyntaxNode, Map<String, List<Declaration>>> members = new IdentityHashMap<>();
+  /**
+   * Per name and scope, the locals by the offset they become visible from, each mapped to the latest declared among
+   * those visible from there on; so a lookup is a map hit and a floor search per enclosing scope, not a scan.
+   */
+  private final Map<String, Map<SyntaxNode, TreeMap<Integer, Declaration>>> locals = new HashMap<>();
+  /** The innermost local scope around each token and the one around each local scope, nested by offset as {@link Scopes#contains} tests. */
+  private SyntaxNode[] localScopeAt;
+  private final Map<SyntaxNode, SyntaxNode> outerLocalScope = new IdentityHashMap<>();
 
-  private Symbols(Scopes scopes) { this.scopes = scopes; }
-
-  /** Null when the file did not parse. */
-  static Symbols of(SourceFile file) {
-    if (file.tree() == null) return null;
-    var symbols = new Symbols(new Scopes(file));
-    symbols.declare();
-    symbols.resolve();
-    return symbols;
+  /** Needs a parsed file; {@link SourceFile#symbols()} builds it once per file. */
+  Symbols(Scopes scopes) {
+    this.scopes = scopes;
+    declare();
+    indexLocals();
+    resolve();
   }
 
-  /** Members of the given class, by name. */
-  List<Declaration> membersOf(SyntaxNode type) {
-    return declarations.stream().filter(d -> !d.kind.isLocal() && d.scope == type).toList();
+  /** The first member of the class with that name, or null. */
+  Declaration member(SyntaxNode type, String name) {
+    List<Declaration> named = members.getOrDefault(type, Map.of()).get(name);
+    return named == null ? null : named.get(0);
   }
 
   private void declare() {
@@ -158,6 +170,41 @@ final class Symbols {
     declarations.add(declaration);
     byName.computeIfAbsent(name.text(), k -> new ArrayList<>()).add(declaration);
     declarationOffsets.add(name.offset());
+    if (!kind.isLocal()) members.computeIfAbsent(scope, k -> new HashMap<>()).computeIfAbsent(name.text(), k -> new ArrayList<>()).add(declaration);
+  }
+
+  private void indexLocals() {
+    var scopeSet = new IdentityHashMap<SyntaxNode, Boolean>();
+    byName.forEach((name, named) -> {
+      var byScope = new IdentityHashMap<SyntaxNode, List<Declaration>>();
+      named.stream().filter(d -> d.kind.isLocal()).forEach(d -> byScope.computeIfAbsent(d.scope, k -> new ArrayList<>()).add(d));
+      if (byScope.isEmpty()) return;
+      var visible = new IdentityHashMap<SyntaxNode, TreeMap<Integer, Declaration>>();
+      byScope.forEach((scope, list) -> {
+        scopeSet.put(scope, true);
+        var latest = new TreeMap<Integer, Declaration>();
+        Declaration found = null;
+        for (Declaration d : list.stream().sorted(Comparator.comparingInt(x -> x.visibleFrom)).toList()) {
+          if (found == null || d.name.offset() > found.name.offset()) found = d;
+          latest.put(d.visibleFrom, found);
+        }
+        visible.put(scope, latest);
+      });
+      locals.put(name, visible);
+    });
+    localScopeAt = new SyntaxNode[scopes.tokens.size()];
+    Arrays.fill(localScopeAt, scopes.root);
+    scopeSet.remove(scopes.root);
+    // Tree nodes are opened and closed in the same parser call, so their offset ranges nest or are disjoint.
+    List<SyntaxNode> sorted = scopeSet.keySet().stream().sorted(Comparator.<SyntaxNode>comparingInt(n -> n.token().offset())
+        .thenComparing(Comparator.<SyntaxNode>comparingInt(n -> n.last().offset()).reversed())).toList();
+    Deque<SyntaxNode> open = new ArrayDeque<>();
+    for (SyntaxNode scope : sorted) {
+      while (!open.isEmpty() && open.peek().last().offset() < scope.token().offset()) open.pop();
+      outerLocalScope.put(scope, open.isEmpty() ? scopes.root : open.peek());
+      open.push(scope);
+      Arrays.fill(localScopeAt, scopes.indexOf(scope.token()), scopes.indexOf(scope.last()) + 1, scope);
+    }
   }
 
   private void resolve() {
@@ -204,13 +251,15 @@ final class Symbols {
     return local != null ? local : member(token, index);
   }
 
-  /** The latest local declaration of the name visible at the token. */
+  /** The latest local declaration of the name visible at the token: in a scope around it, from {@code visibleFrom} on. */
   private Declaration local(Token token, int index) {
+    Map<SyntaxNode, TreeMap<Integer, Declaration>> visible = locals.get(token.text());
+    if (visible == null) return null;
     Declaration found = null;
-    for (Declaration declaration : byName.get(token.text())) {
-      if (!declaration.kind.isLocal() || token.offset() < declaration.visibleFrom) continue;
-      if (!scopes.contains(declaration.scope, token)) continue;
-      if (found == null || declaration.name.offset() > found.name.offset()) found = declaration;
+    for (SyntaxNode scope = localScopeAt[index]; scope != null; scope = scope == scopes.root ? null : outerLocalScope.get(scope)) {
+      TreeMap<Integer, Declaration> latest = visible.get(scope);
+      var entry = latest == null ? null : latest.floorEntry(token.offset());
+      if (entry != null && (found == null || entry.getValue().name.offset() > found.name.offset())) found = entry.getValue();
     }
     return found;
   }
@@ -218,9 +267,8 @@ final class Symbols {
   /** A member of the enclosing class, or of an outer class. */
   private Declaration member(Token token, int index) {
     for (SyntaxNode type = scopes.classOf(scopes.blockAt(index)); type != null; type = outer(type)) {
-      for (Declaration declaration : byName.get(token.text())) {
-        if (!declaration.kind.isLocal() && declaration.scope == type) return declaration;
-      }
+      Declaration declaration = member(type, token.text());
+      if (declaration != null) return declaration;
     }
     return null;
   }
@@ -235,8 +283,8 @@ final class Symbols {
     Token literal = scopes.tokens.get(index);
     String text = literal.text();
     if (text.length() < 2 || !(text.startsWith("\"") || text.startsWith("'"))) return;
-    List<Declaration> named = byName.get(text.substring(1, text.length() - 1));
-    if (named == null) return;
+    String name = text.substring(1, text.length() - 1);
+    if (!byName.containsKey(name)) return;
     Token before = scopes.significantBefore(index);
     if (before == null) return;
     boolean used = false;
@@ -251,6 +299,6 @@ final class Symbols {
     }
     if (!used) return;
     SyntaxNode type = scopes.classOf(scopes.blockAt(index));
-    named.stream().filter(d -> d.kind == Kind.SIGNAL && d.scope == type).forEach(d -> d.uses++);
+    members.getOrDefault(type, Map.of()).getOrDefault(name, List.of()).stream().filter(d -> d.kind == Kind.SIGNAL).forEach(d -> d.uses++);
   }
 }

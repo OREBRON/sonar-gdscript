@@ -28,15 +28,9 @@ final class Calls {
   private final Symbols symbols;
   private final List<Token> tokens;
 
-  private Calls(Symbols symbols) {
+  Calls(Symbols symbols) {
     this.symbols = symbols;
     this.tokens = TokenRanges.significant(symbols.scopes.tokens);
-  }
-
-  /** Null when the file did not parse. */
-  static Calls of(SourceFile file) {
-    Symbols symbols = Symbols.of(file);
-    return symbols == null ? null : new Calls(symbols);
   }
 
   /** {@code receiver.member} for one of the members, with its arguments when it is called. */
