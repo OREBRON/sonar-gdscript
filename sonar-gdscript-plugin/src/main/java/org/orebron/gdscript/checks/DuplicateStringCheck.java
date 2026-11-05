@@ -10,7 +10,8 @@ import org.orebron.gdscript.lexer.TokenKind;
 
 /**
  * The same string literal written at least {@code threshold} times in a file. StringName ({@code &"..."}) and NodePath
- * ({@code ^"..."}) literals name things and are left out, as are strings shorter than five characters.
+ * ({@code ^"..."}) literals name things and are left out, as are strings shorter than five characters. The message
+ * gives the count, not the literal; the issue location highlights it.
  */
 public final class DuplicateStringCheck implements Check {
   private static final int MINIMUM_LENGTH = 5;
@@ -38,7 +39,8 @@ public final class DuplicateStringCheck implements Check {
       int count = entry.getValue().size();
       if (count < threshold) continue;
       Token first = entry.getValue().get(0);
-      String message = "Define a constant instead of duplicating this literal " + first.text().replaceFirst("^r", "") + " " + count + " times.";
+      // Never the literal itself: it may be a secret, and messages reach people who cannot read the source.
+      String message = "Define a constant instead of duplicating this literal " + count + " times.";
       violations.add(first.line() == first.endLine() ? Violation.at(this, first, message) : Violation.onLine(this, first.line(), message));
     }
     return violations;

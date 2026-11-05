@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.orebron.gdscript.lexer.GDScriptLexer;
@@ -27,7 +30,7 @@ class SecurityChecksTest {
     var file = parse(source);
     assertEquals(List.of(3, 4, 5, 6), lines(new SecurityChecks.ProcessExecutionCheck().check(file, 0)));
     assertEquals(List.of(4), lines(new SecurityChecks.ShellCommandCheck().check(file, 0)));
-    var both = new java.util.ArrayList<Violation>(new SecurityChecks.ProcessExecutionCheck().check(file, 0));
+    var both = new ArrayList<Violation>(new SecurityChecks.ProcessExecutionCheck().check(file, 0));
     both.addAll(new SecurityChecks.ShellCommandCheck().check(file, 0));
     var kept = Checks.withPrecedence(both);
     assertEquals(List.of("process-execution:3", "shell-command:4", "process-execution:5", "process-execution:6"),
@@ -104,6 +107,18 @@ class SecurityChecksTest {
     assertEquals(List.of(1, 2, 3, 11, 12), lines(violations));
     assertTrue(violations.stream().noneMatch(v -> v.message().contains("AIza") || v.message().contains("s3cr3t")));
     assertEquals("Remove this hard-coded value of \"client_secret\"; load the credential from a secure source.", violations.get(2).message());
+  }
+
+  /** Issue messages reach people who cannot read the source (issue API, webhooks, notifications). */
+  @Test void noMessageRepeatsASecretValue() throws Exception {
+    var file = parse(Files.readString(Path.of("..", "its", "rules", "hardcoded-credential.gd")));
+    var violations = new ArrayList<Violation>(new SecurityChecks.HardcodedCredentialCheck().check(file, 0));
+    var duplicates = new DuplicateStringCheck().check(file, 3);
+    assertEquals(1, duplicates.size()); // "Zx81kQ0pLm" is written three times
+    violations.addAll(duplicates);
+    for (String secret : List.of("Zq8vLm2Pw4Kd", "s3cr3tP4ss", "Zx81kQ0pLm")) {
+      assertTrue(violations.stream().noneMatch(v -> v.message().contains(secret)), secret);
+    }
   }
 
   @Test void weakOptionsOnEngineClasses() throws Exception {

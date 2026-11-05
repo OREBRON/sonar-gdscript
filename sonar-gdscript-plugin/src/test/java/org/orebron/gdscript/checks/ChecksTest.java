@@ -144,7 +144,7 @@ class ChecksTest {
     var violations = new DuplicateStringCheck().check(parse(source), 3);
     assertEquals(List.of(1), lines(violations));
     assertEquals(List.of(9), violations.stream().map(Violation::column).toList());
-    assertEquals("Define a constant instead of duplicating this literal \"speed\" 3 times.", violations.get(0).message());
+    assertEquals("Define a constant instead of duplicating this literal 3 times.", violations.get(0).message());
     assertTrue(new DuplicateStringCheck().check(parse(source), 4).isEmpty());
   }
 
