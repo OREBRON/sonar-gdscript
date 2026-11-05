@@ -97,9 +97,11 @@ class SecurityChecksTest {
         var password = "Enter your password"
         var auth_token = "<your-token>"
         var secret = ""
+        const SECRET_A = "app//client_token"
+        const SECRET_B = "app/client_token/"
         """;
     var violations = new SecurityChecks.HardcodedCredentialCheck().check(parse(source), 0);
-    assertEquals(List.of(1, 2, 3), lines(violations));
+    assertEquals(List.of(1, 2, 3, 11, 12), lines(violations));
     assertTrue(violations.stream().noneMatch(v -> v.message().contains("AIza") || v.message().contains("s3cr3t")));
     assertEquals("Remove this hard-coded value of \"client_secret\"; load the credential from a secure source.", violations.get(2).message());
   }
@@ -131,6 +133,11 @@ class SecurityChecksTest {
       assertTrue(new SecurityChecks.ShellCommandCheck().check(shell, 0).isEmpty());
       new SecurityChecks.HardcodedCredentialCheck().check(credential, 0);
     });
+  }
+
+  @Test void longPathsDoNotOverflowTheStack() throws Exception {
+    var path = parse("var token = \"" + "a/".repeat(50_000) + "b\"\n");
+    assertTrue(new SecurityChecks.HardcodedCredentialCheck().check(path, 0).isEmpty());
   }
 
   private static SourceFile parse(String source) throws Exception {

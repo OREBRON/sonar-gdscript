@@ -321,9 +321,15 @@ final class SecurityChecks {
     private static boolean looksSecret(String value) {
       if (value.length() < 6 || value.chars().anyMatch(Character::isWhitespace)) return false;
       if (value.matches("[a-z_.]+|[A-Z_.]+") || value.contains("://") || value.startsWith("/")) return false;
-      if (value.matches("[A-Za-z0-9_.]+(/[A-Za-z0-9_.]+)+")) return false; // a settings or resource path such as "app/client_token"
+      if (isSlashPath(value)) return false; // a settings or resource path such as "app/client_token"
       if (value.chars().distinct().count() <= 2) return false;
       return !PLACEHOLDER.matcher(value).find();
+    }
+
+    /** {@code [A-Za-z0-9_.]+(/[A-Za-z0-9_.]+)+} without a regex: Java recurses once per repeated group and overflows. */
+    private static boolean isSlashPath(String value) {
+      if (value.indexOf('/') <= 0 || value.endsWith("/") || value.contains("//")) return false;
+      return value.chars().allMatch(c -> c == '/' || c == '_' || c == '.' || c < 128 && Character.isLetterOrDigit(c));
     }
   }
 
