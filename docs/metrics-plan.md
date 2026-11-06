@@ -59,6 +59,9 @@ and complexity-threshold rules (those belong to roadmap Phase 3).
 
 - Lines end at `\r\n`, `\n` or a lone `\r`, matching Sonar's own split, so
   measures and `ncloc_data` land on the lines Sonar displays.
+  Token boundaries follow Godot instead: like Godot 4.7.2, a `#` comment runs
+  to `\n`, so a lone `\r` inside it keeps the rest of that line in the
+  comment, which then spans two Sonar lines (issue #13).
 - Columns are UTF-16 offsets (what `newRange` expects); the line-length rule
   keeps counting code points.
 - Token ranges are start-inclusive and end-exclusive. A multi-line token ends

@@ -51,7 +51,7 @@ public final class GDScriptLexer {
       return true;
     }
     if (c == ' ' || c == '\t') cursor.advance(1);
-    else if (c == '#') trivia(TokenKind.COMMENT, cursor.restOfLineLength());
+    else if (c == '#') comment();
     else if (c == '\\' && cursor.isLineBreak(1)) continuation();
     else token();
     return false;
@@ -79,6 +79,22 @@ public final class GDScriptLexer {
     trivia(TokenKind.CONTINUATION, 1);
     cursor.newline();
     continuing = true;
+  }
+
+  /**
+   * Like Godot 4.7.2's tokenizer, a comment runs to '\n' (issue #13): a lone '\r' inside it breaks the line for
+   * positions only, so the comment may span lines.
+   */
+  private void comment() {
+    int start = cursor.position();
+    int line = cursor.line();
+    int column = cursor.column();
+    cursor.advance(cursor.restOfLineLength());
+    while (cursor.peek() == '\r' && cursor.peek(1) != '\n') {
+      cursor.newline();
+      cursor.advance(cursor.restOfLineLength());
+    }
+    tokens.add(new Token(TokenKind.COMMENT, cursor.text(start, cursor.position()), start, line, column, cursor.line(), cursor.column(), lineIndent, 0));
   }
 
   private void trivia(TokenKind kind, int length) {

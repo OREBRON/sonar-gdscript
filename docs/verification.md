@@ -183,6 +183,14 @@ in a scope (8) and an identifier visually similar to a keyword (1, Unicode
 confusables data). All 12,132 `.gd` files still parse: the local Godot
 projects outside build and cache folders plus the 461 demo files.
 
+Lone carriage returns (2026-11-06, `godot --headless --check-only`, then run):
+Godot 4.7.2 ends a `#` comment only at `\n`, so a lone `\r` inside a comment
+does not end it and Godot runs the code on the next line; the lexer now reads
+such a comment the same way (issue #13). In a string Godot keeps a lone `\r`
+as text. In code Godot rejects it ("Stray carriage return character in source
+code"), while the lexer reads it as a line break, which only analyzes a file
+Godot refuses to load.
+
 ## Second server scan (2026-11-03)
 The same server, scanner and scope as the first scan, with the plugin of
 commit 1b7d7c6 (code-smell rules, highlighting, CPD tokens, stricter parsing)

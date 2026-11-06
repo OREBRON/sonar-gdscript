@@ -149,6 +149,15 @@ class GDScriptLexerTest {
     assertEquals(List.of(1, 2, 3, 4), lines);
   }
 
+  /** Issue #13: like Godot 4.7.2, a comment runs to '\n'; a lone CR inside it only breaks the line for positions. */
+  @Test void keepsALoneCrInsideAComment() throws LexException {
+    var tokens = GDScriptLexer.lex("func f():\n\t# a\r\t\"\"\"\n\tOS.execute(\"sh\", [])\n\t# b\r\t\"\"\"\n\tpass\n");
+    assertEquals(List.of("func", "f", "OS", "execute", "pass"), tokens.stream().filter(t -> t.kind() == IDENTIFIER).map(Token::text).toList());
+    var comment = tokens.stream().filter(t -> t.kind() == COMMENT).findFirst().orElseThrow();
+    assertEquals(List.of("# a\r\t\"\"\"", 2, 1, 3, 4), List.of(comment.text(), comment.line(), comment.column(), comment.endLine(), comment.endColumn()));
+    assertEquals(4, tokens.stream().filter(t -> t.text().equals("OS")).findFirst().orElseThrow().line());
+  }
+
   @Test void spansMultiLineStrings() throws LexException {
     var string = GDScriptLexer.lex("x\ny\n    \"\"\"a\nbc\"\"\"\n").stream().filter(t -> t.kind() == STRING).findFirst().orElseThrow();
     assertEquals(List.of(3, 4, 4, 5), List.of(string.line(), string.column(), string.endLine(), string.endColumn()));

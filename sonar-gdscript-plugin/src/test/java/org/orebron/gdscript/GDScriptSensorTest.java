@@ -215,6 +215,19 @@ class GDScriptSensorTest {
     assertEquals(PARSING_FAILURE + "Nesting deeper than 256 near '1' at line 3, column 265", issue.primaryLocation().message());
   }
 
+  /** Issue #13: Godot 4.7.2 runs code after a comment holding a lone CR, so the security rules must see it too. */
+  @Test void findsCodeAfterALoneCrInAComment() {
+    var context = activeRules("parsing-failure", "process-execution");
+    add(context, "sample.gd", "func f():\n\t# a\r\t\"\"\"\n\tOS.execute(\"sh\", [])\n\t# b\r\t\"\"\"\n\tpass\n", "gdscript", InputFile.Type.MAIN);
+    add(context, "trailing.gd", "# a\r", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    assertEquals(0, measure(context, "sample.gd", INCOMPLETE));
+    assertEquals(0, measure(context, "trailing.gd", INCOMPLETE));
+    assertEquals(List.of("process-execution:4"), context.allIssues().stream()
+        .map(issue -> issue.ruleKey().rule() + ":" + issue.primaryLocation().textRange().start().line()).toList());
+    assertEquals(List.of(TypeOfText.COMMENT), context.highlightingTypeAt("project:sample.gd", 3, 2));
+  }
+
   @Test void reportsLexAndReadFailuresAndNotCleanFiles() {
     var context = activeRules("parsing-failure");
     add(context, "lex.gd", "var s = \"abc\n", "gdscript", InputFile.Type.MAIN);
