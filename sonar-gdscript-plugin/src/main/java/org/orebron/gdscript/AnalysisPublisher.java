@@ -40,7 +40,7 @@ final class AnalysisPublisher {
     if (analysis.size() != null) publishSize(file, analysis.size());
     if (analysis.structure() != null) publishStructure(file, analysis.structure());
     if (!analysis.complete()) publishFailure(file, analysis.failure());
-    if (!analysis.tokens().isEmpty()) publishTokens(file, analysis.tokens());
+    if (!analysis.tokens().isEmpty()) publishTokens(file, analysis.tokens(), analysis.complete() ? 0 : analysis.failure().line());
     analysis.violations().forEach(violation -> publishIssue(file, violation));
   }
 
@@ -58,9 +58,12 @@ final class AnalysisPublisher {
     lines.save();
   }
 
-  /** NOSONAR lines are registered before any issue is saved, since the scanner filters issues as they are saved. */
-  private void publishTokens(InputFile file, List<Token> tokens) {
-    noSonarFilter.noSonarInFile(file, noSonarLines(tokens));
+  /**
+   * NOSONAR lines are registered before any issue is saved, since the scanner filters issues as they are saved. The
+   * line where the analysis stopped is left out, so a comment there cannot drop the parsing-failure issue (issue #14).
+   */
+  private void publishTokens(InputFile file, List<Token> tokens, int failureLine) {
+    noSonarFilter.noSonarInFile(file, noSonarLines(tokens, failureLine));
     NewHighlighting highlighting = context.newHighlighting().onFile(file);
     NewCpdTokens cpd = context.newCpdTokens().onFile(file);
     for (Token token : tokens) {
@@ -73,10 +76,10 @@ final class AnalysisPublisher {
     cpd.save();
   }
 
-  /** Lines with a comment containing NOSONAR; the scanner drops the issues of every rule there. */
-  private static Set<Integer> noSonarLines(List<Token> tokens) {
+  /** Lines with a comment containing NOSONAR, but the failure line; the scanner drops the issues of every rule there. */
+  private static Set<Integer> noSonarLines(List<Token> tokens, int failureLine) {
     return tokens.stream().filter(token -> token.kind() == TokenKind.COMMENT && token.text().contains("NOSONAR"))
-        .map(Token::line).collect(Collectors.toSet());
+        .map(Token::line).filter(line -> line != failureLine).collect(Collectors.toSet());
   }
 
   private static TypeOfText highlighting(Token token) {
@@ -120,10 +123,16 @@ final class AnalysisPublisher {
 
   private void publishIssue(InputFile file, Violation violation) {
     var issue = context.newIssue().forRule(violation.rule());
-    issue.at(issue.newLocation().on(file).at(range(file, violation)).message(violation.message())).save();
+    var location = issue.newLocation().on(file).message(violation.message());
+    TextRange range = range(file, violation);
+    if (range != null) location.at(range);
+    issue.at(location).save();
   }
 
-  /** The whole line when the scanner rejects the columns: the file's other results are already saved (issue #12). */
+  /**
+   * The whole line when the scanner rejects the columns: the file's other results are already saved (issue #12). Null,
+   * for an issue on the file, when the line is 0 or past the indexed text.
+   */
   private static TextRange range(InputFile file, Violation violation) {
     if (violation.column() >= 0) {
       try {
@@ -132,7 +141,12 @@ final class AnalysisPublisher {
         // An empty, reversed or past-line-end range from a check bug; falls through to the line.
       }
     }
-    return file.selectLine(violation.line());
+    if (violation.line() < 1) return null;
+    try {
+      return file.selectLine(violation.line());
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   private void save(InputFile file, Metric<Integer> metric, int value) {

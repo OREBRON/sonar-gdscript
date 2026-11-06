@@ -15,8 +15,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.orebron.gdscript.lexer.GDScriptLexer;
+import org.orebron.gdscript.lexer.SourceException;
+import org.orebron.gdscript.lexer.Token;
 import org.orebron.gdscript.metrics.SizeMetrics;
 import org.orebron.gdscript.parser.GDScriptParser;
+import org.orebron.gdscript.parser.SyntaxNode;
 
 /**
  * The fixture project in its/rules, which is also scanned on a server: every rule has a file named after it, and
@@ -73,19 +76,27 @@ class RuleFixturesTest {
     return expected.stream().sorted().toList();
   }
 
-  /** Every rule at its default limit, with the precedence a real analysis applies. */
-  private static List<Violation> analyze(String source) throws Exception {
-    var file = parse(source);
+  /**
+   * Every rule at its default limit, with the precedence a real analysis applies. As in the sensor, a file that fails
+   * to tokenize or parse is checked with what could be read, and parsing-failure reports the failure.
+   */
+  private static List<Violation> analyze(String source) {
+    List<Token> tokens = List.of();
+    SyntaxNode tree = null;
+    SourceException failure = null;
+    try {
+      tokens = GDScriptLexer.lex(source);
+      tree = GDScriptParser.parse(tokens);
+    } catch (SourceException e) {
+      failure = e;
+    }
+    var file = new SourceFile(source, tokens, tokens.isEmpty() ? null : SizeMetrics.of(tokens), tree);
     var violations = new ArrayList<Violation>();
     for (Check check : Checks.ALL) {
       int limit = check.limit().map(Limit::defaultValue).orElse(check instanceof LineLengthCheck ? LineLengthCheck.DEFAULT_MAXIMUM : 0);
       violations.addAll(check.check(file, limit));
+      if (failure != null && check instanceof ParsingFailureCheck parsingFailure) violations.add(parsingFailure.violation(failure.getMessage(), failure.line()));
     }
     return Checks.withPrecedence(violations);
-  }
-
-  private static SourceFile parse(String source) throws Exception {
-    var tokens = GDScriptLexer.lex(source);
-    return new SourceFile(source, tokens, SizeMetrics.of(tokens), GDScriptParser.parse(tokens));
   }
 }

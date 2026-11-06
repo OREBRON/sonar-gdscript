@@ -33,7 +33,7 @@ except `too-many-returns`) and the sensor read that list. Limits are integer
 rule parameters (`max`, or `threshold` for `duplicate-string`); a non-positive
 or non-integer value fails the analysis, as for line-length. Tree rules report
 nothing on files the parser could not read (`LEXICAL_ONLY`); they are counted
-by `gdscript_incomplete_files` instead.
+by `gdscript_incomplete_files` and reported by `parsing-failure` instead.
 Defaults follow SonarSource's rules for other languages.
 
 | Rule | Severity | Default `max` | Finding |
@@ -54,7 +54,9 @@ Defaults follow SonarSource's rules for other languages.
 
 A comment containing `NOSONAR` drops the issues on its line; the plugin passes
 the lines to the scanner, which filters the issues. A file that fails to
-tokenize has no NOSONAR lines, so its line-length issues stay.
+tokenize has no NOSONAR lines, so its line-length issues stay. The line where
+the analysis of an incomplete file stopped is never a NOSONAR line, so a comment
+there cannot drop the `parsing-failure` issue.
 
 The fixtures in `ChecksTest` cover each rule at and just above its limit or with
 compliant and noncompliant code, and the sensor tests cover the issue location
@@ -128,6 +130,19 @@ credential finding outside tests was a setting name, now excluded. Test
 fixtures with fake tokens are reported; marking the test folder with
 `sonar.tests` keeps the sensor away from them. The confirmed rules (L2–L4,
 taint) are not implemented.
+
+## Analysis failures
+
+| Rule | Type | Severity | Finding |
+|---|---|---|---|
+| `parsing-failure` | Code smell | Major | A file that could not be read, tokenized or parsed (`LEXICAL_ONLY` or `FAILED`), for example a syntax error or an expression nested past the parser's depth limit of 256. The rules that need a syntax tree, every security rule among them, do not run on such a file. Reported on the line where the analysis stopped, or on the file when there is none; the message is the sanitized failure message of the analysis error. |
+
+`gdscript_incomplete_files` counts the same files, but a measure without a
+`new_` variant and an analysis error do not reach new-code quality-gate
+conditions or pull-request decoration; an issue does. This follows SonarSource's
+parser-failure rules for other languages (`python:ParsingError`, S2260). The
+rule is in the default profile; strict mode (`sonar.gdscript.failOnIncompleteAnalysis`)
+is unchanged and still off by default.
 
 ## Rule fixtures
 

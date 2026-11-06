@@ -5,7 +5,8 @@ key. A `# Noncompliant` comment marks a line the rule must report at its default
 limit; `# Noncompliant@+1` marks the next line and `# Noncompliant 2` counts two
 issues on one line. Every other line, including the near misses next to each
 case, must stay clean for that rule. `nosonar.gd` holds findings on `# NOSONAR`
-lines, which the scanner must drop.
+lines, which the scanner must drop. `parsing-failure.gd` does not parse on
+purpose: its marker is the line where the parser stops.
 
 The same files are checked twice:
 

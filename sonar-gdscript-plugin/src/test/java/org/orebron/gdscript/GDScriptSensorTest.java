@@ -183,6 +183,94 @@ class GDScriptSensorTest {
     assertTrue(context.allAnalysisErrors().iterator().next().message().startsWith("Cannot read the file"));
   }
 
+  private static final String SHELL_CALL = "func f(c):\n\tOS.execute(\"sh\", [\"-c\", c])\n";
+  private static final String PARSING_FAILURE = "GDScript analysis is incomplete, so rules that need the syntax tree, including the "
+      + "security rules, did not run on this file: ";
+
+  private SensorContextTester activeRules(String... keys) {
+    var context = SensorContextTester.create(directory);
+    var rules = new ActiveRulesBuilder();
+    for (String key : keys) rules.addRule(new org.sonar.scanner.plugin.api.impl.rule.NewActiveRule.Builder()
+        .setRuleKey(RuleKey.of("gdscript", key)).setLanguage("gdscript").build());
+    context.setActiveRules(rules.build());
+    return context;
+  }
+
+  /** Issue #14: a nesting-depth parse failure silences the security rules, so a parsing-failure issue reaches new-code gates. */
+  @Test void reportsAParsingFailureWhereTheSecurityRulesAreSilent() {
+    var parsed = activeRules("parsing-failure", "process-execution");
+    add(parsed, "sample.gd", SHELL_CALL, "gdscript", InputFile.Type.MAIN);
+    execute(parsed);
+    assertEquals(List.of(RuleKey.of("gdscript", "process-execution")), parsed.allIssues().stream().map(issue -> issue.ruleKey()).toList());
+
+    var context = activeRules("parsing-failure", "process-execution");
+    add(context, "sample.gd", SHELL_CALL + "var x = " + "(".repeat(256) + "1" + ")".repeat(256) + "\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    assertEquals(1, measure(context, "sample.gd", INCOMPLETE));
+    assertEquals(1, context.allIssues().size());
+    var issue = context.allIssues().iterator().next();
+    assertEquals(RuleKey.of("gdscript", "parsing-failure"), issue.ruleKey());
+    var range = issue.primaryLocation().textRange();
+    assertEquals(List.of(3, 3), List.of(range.start().line(), range.end().line()));
+    assertEquals(PARSING_FAILURE + "Nesting deeper than 256 near '1' at line 3, column 265", issue.primaryLocation().message());
+  }
+
+  @Test void reportsLexAndReadFailuresAndNotCleanFiles() {
+    var context = activeRules("parsing-failure");
+    add(context, "lex.gd", "var s = \"abc\n", "gdscript", InputFile.Type.MAIN);
+    // A literal is named by its kind only: its text may be a secret.
+    add(context, "literal.gd", "var a = 1 \"s3cret\"\n", "gdscript", InputFile.Type.MAIN);
+    add(context, "clean.gd", "var a = 1\n", "gdscript", InputFile.Type.MAIN);
+    context.fileSystem().add(TestInputFileBuilder.create("project", "missing.gd").setLanguage("gdscript")
+        .setType(InputFile.Type.MAIN).setCharset(StandardCharsets.UTF_8).build());
+    execute(context);
+    var issues = new HashMap<String, org.sonar.api.batch.sensor.issue.Issue>();
+    context.allIssues().forEach(issue -> issues.put(issue.primaryLocation().inputComponent().key(), issue));
+    assertEquals(Set.of("project:lex.gd", "project:literal.gd", "project:missing.gd"), issues.keySet());
+    var lex = issues.get("project:lex.gd").primaryLocation();
+    assertEquals(PARSING_FAILURE + "Unterminated string at line 1, column 9", lex.message());
+    assertEquals(1, lex.textRange().start().line());
+    String literal = issues.get("project:literal.gd").primaryLocation().message();
+    assertTrue(literal.startsWith(PARSING_FAILURE) && literal.contains("near a string literal") && !literal.contains("s3cret"), literal);
+    var missing = issues.get("project:missing.gd").primaryLocation();
+    assertTrue(missing.message().startsWith(PARSING_FAILURE + "Cannot read the file"), missing.message());
+    assertNull(missing.textRange());
+  }
+
+  /** A failure at the end of the file is on its empty last line; a line the scanner rejects puts the issue on the file. */
+  @Test void reportsAFailureAtTheEndOfTheFileAndPastIt() {
+    var context = activeRules("parsing-failure");
+    add(context, "sample.gd", "var a = [1, 2\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    var location = context.allIssues().iterator().next().primaryLocation();
+    assertTrue(location.message().startsWith(PARSING_FAILURE + "Expected ']' at end of file"), location.message());
+    assertEquals(2, location.textRange().start().line());
+
+    var past = context(false);
+    add(past, "sample.gd", "var a = 1\n", "gdscript", InputFile.Type.MAIN);
+    var file = past.fileSystem().inputFile(past.fileSystem().predicates().all());
+    var violation = new org.orebron.gdscript.checks.ParsingFailureCheck().violation("m", 99);
+    new AnalysisPublisher(past, fileLines, null)
+        .publish(new FileAnalysis(file, List.of(), null, null, new FileAnalysis.Failure("m", 99, 0), List.of(violation)));
+    assertNull(past.allIssues().iterator().next().primaryLocation().textRange());
+  }
+
+  @Test void reportsNoParsingFailureWhenTheRuleIsInactive() {
+    var context = context("var a = [1, 2\n", "gdscript", InputFile.Type.MAIN, true);
+    execute(context);
+    assertEquals(1, measure(context, "sample.gd", INCOMPLETE));
+    assertTrue(context.allIssues().isEmpty());
+  }
+
+  /** NOSONAR on the line where the analysis stopped must not drop the parsing-failure issue; other lines keep it. */
+  @Test void nosonarCannotHideTheFailureLine() {
+    var context = activeRules("parsing-failure");
+    add(context, "sample.gd", "# NOSONAR\nvar a = )  # NOSONAR\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    assertEquals(Set.of(1), noSonarLines.get("project:sample.gd"));
+    assertEquals(2, context.allIssues().iterator().next().primaryLocation().textRange().start().line());
+  }
+
   @Test void reportsIncompleteFilesWithoutFailingByDefault() {
     var context = goodAndBadFiles();
     execute(context);

@@ -448,7 +448,11 @@ this protocol; the harness documents which surface it uses.
   by `gdscript_incomplete_files` and strict mode, not eliminated.
 - **Plugin metric in quality gates:** unverified on the target server. If the
   harness shows it cannot be used in a gate condition, strict mode is the only
-  gate-level protection.
+  gate-level protection based on the measure. The measure has no `new_`
+  variant, so pull-request and other new-code-only gates cannot use it either;
+  for those, the default-active `parsing-failure` rule raises one issue per
+  incomplete file (issue #14), which new-code issue conditions and PR
+  decoration see.
 - **Syntax drift:** Godot minor releases add syntax (typed dictionaries in 4.4,
   variadic functions and `@abstract` in 4.5). The support matrix is pinned to a
   Godot version; complete token consumption turns unknown syntax into a

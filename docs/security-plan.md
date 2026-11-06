@@ -311,7 +311,9 @@ Budgets and incompleteness:
   reviewed without reading engine code.
 - Issues follow the metrics plan's publication boundary and failure policy:
   - files without a complete parse get no L1+ security findings;
-  - those files are already counted by `gdscript_incomplete_files`.
+  - those files are already counted by `gdscript_incomplete_files`, and the
+    `parsing-failure` rule raises an issue on each of them, so new-code gates
+    and pull-request decoration see the gap.
 
 ## Analyzer hardening
 

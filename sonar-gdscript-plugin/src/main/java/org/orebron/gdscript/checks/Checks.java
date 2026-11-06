@@ -20,7 +20,7 @@ public final class Checks {
       new SecurityChecks.JavaScriptEvalCheck(), new SecurityChecks.ResourcePackLoadingCheck(),
       new SecurityChecks.ObjectDecodingCheck(), new SecurityChecks.RpcAnyPeerCheck(),
       new SecurityChecks.HardcodedCredentialCheck(), new SecurityChecks.WeakHashCheck(),
-      new SecurityChecks.AesEcbReferenceCheck(), new SecurityChecks.TlsUnsafeOptionsCheck());
+      new SecurityChecks.AesEcbReferenceCheck(), new SecurityChecks.TlsUnsafeOptionsCheck(), new ParsingFailureCheck());
 
   /** A less specific rule and the more specific one that reports at the same place (security plan, "Paired rules"). */
   private static final Map<String, String> MORE_SPECIFIC = Map.of("process-execution", "shell-command");

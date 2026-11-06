@@ -7,6 +7,7 @@ import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
 import org.orebron.gdscript.checks.ActiveCheck;
 import org.orebron.gdscript.checks.Checks;
+import org.orebron.gdscript.checks.ParsingFailureCheck;
 import org.orebron.gdscript.checks.SourceFile;
 import org.orebron.gdscript.checks.Violation;
 import org.orebron.gdscript.lexer.GDScriptLexer;
@@ -41,14 +42,29 @@ record FileAnalysis(InputFile file, List<Token> tokens, SizeMetrics size, Struct
    * failure ends this file as FAILED, so one hostile or unsupported file cannot stop the analysis of the others.
    */
   static FileAnalysis of(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {
+    FileAnalysis analysis;
     try {
-      return analyze(file, checks, cancelled);
+      analysis = analyze(file, checks, cancelled);
     } catch (CancellationException e) {
       throw e;
     } catch (RuntimeException | StackOverflowError e) {
       // Only the type: the message may carry scanned text.
-      return new FileAnalysis(file, List.of(), null, null, new Failure("Analysis failed: " + e.getClass().getSimpleName(), 0, 0), List.of());
+      analysis = new FileAnalysis(file, List.of(), null, null, new Failure("Analysis failed: " + e.getClass().getSimpleName(), 0, 0), List.of());
     }
+    return analysis.withFailureIssue(checks);
+  }
+
+  /** Adds the parsing-failure issue when the file is incomplete and that rule is active (issue #14). */
+  private FileAnalysis withFailureIssue(List<ActiveCheck> checks) {
+    if (complete()) return this;
+    for (ActiveCheck active : checks) {
+      if (active.check() instanceof ParsingFailureCheck check) {
+        var all = new ArrayList<>(violations);
+        all.add(check.violation(failure.message(), failure.line()));
+        return new FileAnalysis(file, tokens, size, structure, failure, List.copyOf(all));
+      }
+    }
+    return this;
   }
 
   private static FileAnalysis analyze(InputFile file, List<ActiveCheck> checks, BooleanSupplier cancelled) {

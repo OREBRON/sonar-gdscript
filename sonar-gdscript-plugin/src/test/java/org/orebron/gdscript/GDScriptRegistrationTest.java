@@ -33,7 +33,7 @@ class GDScriptRegistrationTest {
         "shadowed-variable", "unreachable-code", "unreachable-pattern", "standalone-expression", "empty-file",
         "get-node-without-onready", "onready-with-export", "process-execution", "shell-command", "shell-open-dynamic",
         "javascript-eval", "resource-pack-loading", "object-decoding", "rpc-any-peer", "hardcoded-credential", "weak-hash",
-        "aes-ecb-reference", "tls-unsafe-options"));
+        "aes-ecb-reference", "tls-unsafe-options", "parsing-failure"));
     var shell = repository.rule("shell-command");
     assertEquals(org.sonar.api.rules.RuleType.VULNERABILITY, shell.type());
     assertEquals(java.util.Set.of("cwe:78", "owaspTop10-2021:a3"), shell.securityStandards());

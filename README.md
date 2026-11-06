@@ -38,6 +38,9 @@ Godot source (.gd)
   (level L1): process execution, shell commands, `shell_open`,
   `JavaScriptBridge.eval`, resource packs, object decoding, `any_peer` RPCs,
   hard-coded credentials, weak hashes, AES-ECB and unsafe TLS options.
+- A `parsing-failure` rule that reports each file the analyzer could not read,
+  tokenize or parse, where the tree and security rules do not run, so new-code
+  quality gates and pull-request decoration see it.
 - A Sonar-free GDScript lexer module and lexer-based size metrics (`ncloc`,
   `ncloc_data`, `comment_lines`) with an incomplete-file metric and strict mode
   ([metrics plan](docs/metrics-plan.md) M1). They are unit-tested only, not yet
