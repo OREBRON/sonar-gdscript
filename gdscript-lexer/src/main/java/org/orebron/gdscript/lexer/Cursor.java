@@ -1,10 +1,13 @@
 package org.orebron.gdscript.lexer;
 
 import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 
 /** Position, line and column bookkeeping; the only place that knows the line-break rules (CRLF, LF, lone CR). */
 final class Cursor {
   private static final char NONE = '\0';
+  /** Shared one-character texts: operators, digits and line breaks would otherwise cost a String each (issue #15). */
+  private static final String[] ASCII = IntStream.range(0, 128).mapToObj(c -> String.valueOf((char) c)).toArray(String[]::new);
   private final String source;
   private int position;
   private int line = 1;
@@ -61,6 +64,8 @@ final class Cursor {
   int line() { return line; }
   int column() { return columnOf(position); }
   int columnOf(int offset) { return offset - lineStart; }
-  String text(int start, int end) { return source.substring(start, end); }
+  String text(int start, int end) {
+    return end - start == 1 && source.charAt(start) < ASCII.length ? ASCII[source.charAt(start)] : source.substring(start, end);
+  }
   LexException error(String message) { return new LexException(message, line, column()); }
 }

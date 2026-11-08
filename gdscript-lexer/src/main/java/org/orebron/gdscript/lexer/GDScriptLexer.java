@@ -1,6 +1,7 @@
 package org.orebron.gdscript.lexer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
@@ -10,6 +11,11 @@ import java.util.function.BooleanSupplier;
  * character. It reads text only; it never loads or executes project code.
  */
 public final class GDScriptLexer {
+  /**
+   * Tokens per file (issue #15): about 55 bytes each, so at most about 27 MB, while the largest of 13,398 local Godot
+   * files has 41,565. A file with more fails with a LexException instead of exhausting the scanner heap.
+   */
+  public static final int MAX_TOKENS = 500_000;
   private static final int CANCEL_CHECK_INTERVAL = 10_000;
   private final Cursor cursor;
   private final BooleanSupplier cancelled;
@@ -37,10 +43,11 @@ public final class GDScriptLexer {
     startLine();
     while (!cursor.atEnd()) {
       if (step() && !continuing) startLine();
+      if (tokens.size() > MAX_TOKENS) throw cursor.error("More than " + MAX_TOKENS + " tokens in the file");
     }
     if (lineHasCode) tokens.add(here(TokenKind.NEWLINE, 0));
     tokens.add(here(TokenKind.EOF, 0));
-    return List.copyOf(tokens);
+    return Collections.unmodifiableList(tokens);
   }
 
   /** Consumes one element; returns true when it ended a physical line. */

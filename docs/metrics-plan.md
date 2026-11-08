@@ -264,7 +264,7 @@ exist yet is never a failure. Every MAIN file ends in exactly one outcome:
 |---|---|---|
 | `ANALYZED` | Every enabled stage succeeded | All metrics implemented at this milestone; `gdscript_incomplete_files` = 0 |
 | `LEXICAL_ONLY` | Parser failure (M3 onward) | `ncloc`, `ncloc_data`, `comment_lines`, CPD tokens; `gdscript_incomplete_files` = 1; no `classes`, `functions`, `complexity`, `cognitive_complexity` |
-| `FAILED` | Unreadable file or lexer failure | Only `gdscript_incomplete_files` = 1; no other measures, no CPD tokens |
+| `FAILED` | Unreadable file or lexer failure, including more than 500,000 tokens | Only `gdscript_incomplete_files` = 1; no other measures, no CPD tokens |
 
 `gdscript_incomplete_files` is a diagnostic measure: it is the one measure
 published for every MAIN file whatever its outcome.
@@ -440,6 +440,10 @@ this protocol; the harness documents which surface it uses.
     triple-quoted string at the top of a large file;
   - a separate test run with `-Xmx256m` analyzes a 10 MB generated file; no
     file contents, tokens or trees are retained across files.
+  - the lexer stops a file at 500,000 tokens (issue #15): a token costs about
+    55 bytes, so a token-dense file of a few MB fails as `FAILED` with a
+    `parsing-failure` issue instead of exhausting the heap and stopping the
+    whole scan. ADR 0002 records the measurement.
 
 ## Risks
 

@@ -13,6 +13,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.orebron.gdscript.lexer.GDScriptLexer;
 import org.orebron.gdscript.metrics.SizeFixture;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.sensor.highlighting.TypeOfText;
@@ -248,6 +249,22 @@ class GDScriptSensorTest {
     var missing = issues.get("project:missing.gd").primaryLocation();
     assertTrue(missing.message().startsWith(PARSING_FAILURE + "Cannot read the file"), missing.message());
     assertNull(missing.textRange());
+  }
+
+  /** Issue #15: a too token-dense file fails closed with a parsing-failure issue instead of exhausting the heap. */
+  @Test void failsATooTokenDenseFileAndAnalyzesTheNext() {
+    var context = activeRules("parsing-failure");
+    add(context, "dense.gd", "var d = [" + "0,".repeat(GDScriptLexer.MAX_TOKENS / 2) + "0]\n", "gdscript", InputFile.Type.MAIN);
+    add(context, "next.gd", "var b = 1\n", "gdscript", InputFile.Type.MAIN);
+    execute(context);
+    assertEquals(List.of(1, 0), List.of(measure(context, "dense.gd", INCOMPLETE), measure(context, "next.gd", INCOMPLETE)));
+    assertNull(measure(context, "dense.gd", CoreMetrics.NCLOC_KEY));
+    assertEquals(1, measure(context, "next.gd", CoreMetrics.NCLOC_KEY));
+    var issue = context.allIssues().iterator().next();
+    assertEquals(1, context.allIssues().size());
+    assertEquals("project:dense.gd", issue.primaryLocation().inputComponent().key());
+    assertTrue(issue.primaryLocation().message().startsWith(PARSING_FAILURE + "More than " + GDScriptLexer.MAX_TOKENS
+        + " tokens in the file at line 1, column "), issue.primaryLocation().message());
   }
 
   /** A failure at the end of the file is on its empty last line; a line the scanner rejects puts the issue on the file. */

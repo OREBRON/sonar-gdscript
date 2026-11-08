@@ -184,6 +184,14 @@ class GDScriptLexerTest {
     assertEquals(20_001, new GDScriptLexer(source, () -> false).tokenize().size());
   }
 
+  /** Issue #15: tokens cost about 55 bytes each, so a token-dense file fails closed instead of exhausting the heap. */
+  @Test void rejectsAFileWithTooManyTokens() throws LexException {
+    int limit = GDScriptLexer.MAX_TOKENS;
+    var error = assertThrows(LexException.class, () -> GDScriptLexer.lex(";".repeat(limit + 1)));
+    assertEquals("More than " + limit + " tokens in the file at line 1, column " + (limit + 2), error.getMessage());
+    assertEquals(limit + 2, GDScriptLexer.lex(";".repeat(limit)).size());
+  }
+
   private static void assertKinds(String source, TokenKind... expected) throws LexException {
     var kinds = kinds(GDScriptLexer.lex(source)).stream().filter(k -> k != NEWLINE && k != EOF).toList();
     assertEquals(List.of(expected), kinds, source);

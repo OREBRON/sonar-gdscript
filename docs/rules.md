@@ -135,7 +135,7 @@ taint) are not implemented.
 
 | Rule | Type | Severity | Finding |
 |---|---|---|---|
-| `parsing-failure` | Code smell | Major | A file that could not be read, tokenized or parsed (`LEXICAL_ONLY` or `FAILED`), for example a syntax error or an expression nested past the parser's depth limit of 256. The rules that need a syntax tree, every security rule among them, do not run on such a file. Reported on the line where the analysis stopped, or on the file when there is none; the message is the sanitized failure message of the analysis error. |
+| `parsing-failure` | Code smell | Major | A file that could not be read, tokenized or parsed (`LEXICAL_ONLY` or `FAILED`), for example a syntax error, an expression nested past the parser's depth limit of 256, or more than 500,000 tokens in one file (the lexer's per-file bound, so a token-dense generated file cannot exhaust the scanner heap). The rules that need a syntax tree, every security rule among them, do not run on such a file. Reported on the line where the analysis stopped, or on the file when there is none; the message is the sanitized failure message of the analysis error. |
 
 `gdscript_incomplete_files` counts the same files, but a measure without a
 `new_` variant and an analysis error do not reach new-code quality-gate

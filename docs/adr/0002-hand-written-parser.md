@@ -112,4 +112,11 @@ Godot facts the harness must respect:
   check against the new version before the pin moves.
 - The corpus becomes the M1/M3 fixture set; the throwaway prototype is not a
   starting point for production code.
-- Per-file memory is not measured yet; M1 covers it.
+- Per-file memory (issue #15, 2026-11-07, OpenJDK 21, `-Xmx256m`, retained
+  heap after `System.gc()` with the result held): lexing kept 100 bytes per
+  token, so 2 MB of `0,` stopped the whole scan with an `OutOfMemoryError`.
+  Shared one-character texts and no defensive copy of the token list bring it
+  to about 54 bytes per token; trees add little, issues about 190 bytes each.
+  The lexer now fails a file past 500,000 tokens (about 27 MB of tokens), 12×
+  the largest of 13,398 local Godot files (41,565 tokens). A file just under
+  the bound with an issue on every other token is still analyzed in 256 MB.
