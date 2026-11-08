@@ -191,6 +191,19 @@ as text. In code Godot rejects it ("Stray carriage return character in source
 code"), while the lexer reads it as a line break, which only analyzes a file
 Godot refuses to load.
 
+Accessor lists (2026-11-08, `godot --headless --check-only`): in an indented
+property block Godot 4.7.2 allows a line break after the `,` of
+`get = getter,` when `set = setter` starts the next line at the same indent
+(comment and blank lines between are fine); the parser rejected it and now
+accepts it (Godot's own `tests/scripts/lsp/properties.gd`). Godot still rejects,
+and so does the parser, such a break in a one-line `var a: get = g,` and a
+next line indented deeper or less. Godot also rejects `get = g` and
+`set = s` on two lines without the `,`, which the parser accepts. All 14,204
+local `.gd` files were lexed and parsed again: every file outside the engine's
+own test suites and this repository's invalid fixtures parses (12,649 outside
+build, export and cache folders); the 54 `GDTEST_PARSER_ERROR` rejections are
+unchanged.
+
 ## Second server scan (2026-11-03)
 The same server, scanner and scope as the first scan, with the plugin of
 commit 1b7d7c6 (code-smell rules, highlighting, CPD tokens, stricter parsing)

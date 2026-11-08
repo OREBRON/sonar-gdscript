@@ -161,12 +161,18 @@ final class Declarations {
   }
 
   private void accessors(int indent) throws ParseException {
-    if (grammar.tokens.atEndOfLine()) grammar.blocks.indented(indent, this::accessorList);
-    else accessorList(indent);
+    if (grammar.tokens.atEndOfLine()) grammar.blocks.indented(indent, blockIndent -> accessorList(blockIndent, true));
+    else accessorList(indent, false);
   }
 
-  private void accessorList(int indent) throws ParseException {
-    do accessor(indent); while (grammar.tokens.accept(","));
+  /** In an indented block, as in Godot, a line may end after ',' when the next accessor starts a line at the same indent. */
+  private void accessorList(int indent, boolean indented) throws ParseException {
+    TokenStream tokens = grammar.tokens;
+    accessor(indent);
+    while (tokens.accept(",")) {
+      if (indented && tokens.raw().kind() == TokenKind.NEWLINE && tokens.raw().nextIndent() == indent) tokens.skipRawNewline();
+      accessor(indent);
+    }
   }
 
   private void accessor(int indent) throws ParseException {

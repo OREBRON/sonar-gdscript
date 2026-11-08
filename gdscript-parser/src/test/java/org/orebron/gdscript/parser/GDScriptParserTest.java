@@ -23,7 +23,7 @@ class GDScriptParserTest {
       "valid/declarations.gd, 3, 10, 2, 0",
       "valid/expressions.gd, 0, 5, 0, 6",
       "valid/extras.gd, 0, 1, 0, 0",
-      "valid/godot_extras.gd, 0, 3, 0, 0",
+      "valid/godot_extras.gd, 0, 5, 0, 0",
       "valid/lambda_closers.gd, 0, 1, 0, 4",
       "valid/layout.gd, 0, 2, 0, 0",
       "valid/literals.gd, 0, 1, 0, 0",
@@ -80,7 +80,10 @@ class GDScriptParserTest {
       "func f(x):\\n\\tmatch x:\\n\\t\\t{.., 1}:\\n\\t\\t\\tpass| The \"..\" pattern must be the last element in the pattern dictionary",
       "func f(x):\\n\\tmatch x:\\n\\t\\t{1: ..}:\\n\\t\\t\\tpass| The \"..\" pattern cannot be used as a value",
       "var yield = 1| Expected an identifier",
-      "var a = preload| Expected \"(\" after \"preload\""})
+      "var a = preload| Expected \"(\" after \"preload\"",
+      "var a: get = g,\\nset = s| Expected an identifier",
+      "var a:\\n\\tget = g,\\n\\t\\tset = s| Expected an identifier",
+      "var a:\\n\\tget = g,\\nvar b| Expected an identifier"})
   void rejectsWhatGodotsParserRejects(String source, String message) {
     var error = assertThrows(ParseException.class, () -> parse(source.replace("\\n", "\n").replace("\\t", "\t") + "\n"));
     assertTrue(error.getMessage().startsWith(message.strip()), error.getMessage());

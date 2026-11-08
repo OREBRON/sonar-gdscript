@@ -10,6 +10,10 @@ var negative_trailing_dot := -1_234.
 var multi_line_text := "first
 second"
 var lua := {name = 1, "with spaces" = 2}
+var paired: int:
+	get = get_paired,
+	# A comment between the accessors.
+	set = set_paired
 
 
 func names() -> int:
@@ -35,3 +39,11 @@ func flow(x: int, value: Variant) -> void:
 
 func shorthand_paths() -> void:
 	print($%"Unique Name", %Hey/%Howdy)
+
+
+func get_paired() -> int:
+	return 0
+
+
+func set_paired(_value: int) -> void:
+	pass
